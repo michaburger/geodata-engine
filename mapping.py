@@ -5,7 +5,8 @@ import numpy as np
 import pandas
 
 #init map
-map = folium.Map(location=[46.52, 6.565],zoom_start=16)#,tiles='Stamen Toner')
+map = folium.Map(location=[46.52, 6.565],zoom_start=16,tiles='stamentoner')
+folium.TileLayer(tiles='openstreetmap').add_to(map)
 
 #has to be called at the end to generate the map file
 def output_map(filename):
@@ -39,10 +40,10 @@ def hexcol(col):
 		return hexstr
 
 def pick_color(heat):
-	low_range = 60 #ESP for green
-	mid_range = 80 #ESP for orange
-	high_range = 95 #ESP for red
-	max_range = 105 #ESP for blue
+	low_range = 70 #ESP for green
+	mid_range = 90 #ESP for orange
+	high_range = 105 #ESP for red
+	max_range = 120 #ESP for blue
 	green_min = 0
 	green_max = 200
 	red_min = 0

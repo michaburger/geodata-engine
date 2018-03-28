@@ -2,3 +2,5 @@ folium
 pandas
 matplotlib
 geopy
+scipy
+seaborn
