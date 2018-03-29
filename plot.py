@@ -167,7 +167,7 @@ def trilat_quick_plot(gateway_list, point_list, ref_point,txpow,sf):
 						#distance.append(real_distance)
 						rssi.append(p['gateway_rssi'][j])
 						esp.append(p['gateway_esp'][j])
-						mean_total += p['gateway_esp'][j]
+						mean_total += p['gateway_rssi'][j]
 						counter += 1
 			if len(rssi)>2:
 				plt.subplot(3,3,gtw_cnt)
@@ -176,7 +176,7 @@ def trilat_quick_plot(gateway_list, point_list, ref_point,txpow,sf):
 				plt.title(g['gateway_id'] + ', packets: ' + str(counter))
 				sns.distplot(rssi)
 			mean = mean_total / counter
-			print("Mean ESP: "+str(mean))
+			print("Mean RSSI: "+str(mean))
 			print("Packets: " + str(counter))
 
 	plt.tight_layout()
@@ -239,13 +239,13 @@ def distance_plot(point_list, gtw_list, gateway_eui):
 	plt.subplot(211)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('RSSI')
-	plt.title('RSSI vs distance - SF7 - TXpower 5')
+	plt.title('RSSI vs distance - SF'+ str(sf)+' - TXpower '+str(txpow))
 	plt.scatter(dist, rssi)
 
 	plt.subplot(212)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('ESP')
-	plt.title('ESP vs distance - SF7 - TXpower 5')
+	plt.title('ESP vs distance - SF'+ str(sf)+' - TXpower '+str(txpow))
 	plt.scatter(dist, esp)
 
 	plt.show()
@@ -254,7 +254,7 @@ def exponential_func(x, a, b, c):
     return a*np.exp(-b*x)+c
 
 #plots all gateways on the same plot
-def distance_plot_all(point_list, gtw_list):
+def distance_plot_all(point_list, gtw_list,txpow,sf):
 	pts = json.loads(point_list.decode('utf-8'))
 	g_dict = json.loads(gtw_list.decode('utf-8'))
 
@@ -274,32 +274,32 @@ def distance_plot_all(point_list, gtw_list):
 					real_distance = geopy.distance.vincenty(gtw_coords,(p['gps_lat'],p['gps_lon'])).km * 1000
 
 					#filter points with coords 0,0
-					if real_distance < 18000:
+					if real_distance < 15000:
 						dist.append(real_distance)
 						rssi.append(p['gateway_rssi'][j])
 						esp.append(p['gateway_esp'][j])
 						#print('Dist: '+str(real_distance)+ " | RSSI: "+str(p['gateway_rssi'][j]) + " | ESP: "+str(p['gateway_esp'][j]))
 
-	rssifit = curve_fit(exponential_func, dist, rssi, p0=(1, 1e-6, 1))
-	yy = exponential_func(dist, *rssifit)
+	#rssifit = curve_fit(exponential_func, dist, rssi, p0=(1, 1e-6, 1))
+	#yy = exponential_func(dist, *rssifit)
 
 	plt.figure()
 	plt.subplot(211)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('RSSI')
-	plt.title('RSSI vs distance - SF7 - TXpower 5')
+	plt.title('RSSI vs distance - SF12 - TXpower 0')
 	plt.scatter(dist, rssi)
-	plt.plot(dist,yy)
+	#plt.plot(dist,yy)
 
-	espfit = curve_fit(exponential_func, dist, esp, p0=(1, 1e-6, 1))
-	yy = exponential_func(dist, *espfit)
+	#espfit = curve_fit(exponential_func, dist, esp, p0=(1, 1e-6, 1))
+	#yy = exponential_func(dist, *espfit)
 
 	plt.subplot(212)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('ESP')
-	plt.title('ESP vs distance - SF7 - TXpower 5')
+	plt.title('ESP vs distance - SF12 - TXpower 0')
 	plt.scatter(dist, esp)
-	plt.plot(dist,yy)
+	#plt.plot(dist,yy)
 
 	plt.show()
 

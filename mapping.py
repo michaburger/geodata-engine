@@ -106,7 +106,7 @@ def add_point_layer(pointList, layerName='PointLayer', gateway= '0B030153', minS
 			esp.append(trk['gateway_esp'])
 			#first gateway heatmap production. Store ESP value if the EPFL gateway has received the signal.
 			if(trk['gateway_id'][0] == gateway):
-				heat.append((int)(-1*trk['gateway_esp'][0]))
+				heat.append((int)(-1*trk['gateway_rssi'][0]))
 			else:
 				heat.append(0)
 
