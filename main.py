@@ -39,20 +39,35 @@ for cnt, g in enumerate(gtws):
 mapping.output_map('Map1-ESP-SF12.html')
 '''
 
+
+#Trilateration part with intersecting circles
+mapping.add_gateway_layer(db.request_gateways(25))
+
+for ref_point in range (3,9):
+	circle_data = geo.trilat_point_draw_circles(db.request_track(ref_point,0,7),db.request_gateways(30),ref_point)
+	mapping.add_circle_layer(circle_data,ref_point)
+
+mapping.output_map('Circles.html')
+
+
 #weather condition plots
 #plot.time_graph_rssi(db.request_track_no_params(2,"2018-03-15_15:00:00","2018-03-21_00:00:00"),"Weather conditions 15.3.2018 to 20.3.2018")
 #plot.time_graph_rssi(db.request_track_no_params(2,"2018-03-09_17:00:00","2018-03-12_00:00:00"),"Weather conditions 9.3.2018")
 #plot.time_graph_rssi(db.request_track_no_params(2,"2018-03-27_17:00:00","2018-03-28_10:00:00"),"Weather conditions 28.3.2018")
-#plot.temperature_rssi(db.request_track_no_params(2),"RSSI vs Weather conditions")
 
+#Start measures with SF7
+#plot.time_graph_rssi(db.request_track(2,0,7,"2018-04-03_16:00:00","2018-04-05_10:00:00"),"Weather conditions 4.3.2018")
+#plot.temperature_rssi(db.request_track(2),"RSSI vs Weather conditions SF7")
+
+'''
 #plot.distance_plot(db.request_track(20,5,7),db.request_gateways(30),'0B030153')
-sf = 9
+sf = 7
 txpow = 0
-plot.distance_plot_all(db.request_track(20,txpow,sf),db.request_gateways(30),txpow,sf)
+plot.distance_plot_all(db.request_track(20,txpow,sf),db.request_track(3,txpow,sf),db.request_track(4,txpow,sf),db.request_track(5,txpow,sf),db.request_track(6,txpow,sf),db.request_track(7,txpow,sf),db.request_track(8,txpow,sf),db.request_gateways(30),txpow,sf)
 
 #ref_point = 4
 #geo.distance_list(db.request_track(ref_point,0,9),db.request_gateways(30),ref_point)
-
+'''
 
 '''
 sf = 9

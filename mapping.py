@@ -3,10 +3,50 @@ import folium
 from folium.plugins import HeatMap
 import numpy as np
 import pandas
+import geometry as geo
+
+coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053)]
 
 #init map
 map = folium.Map(location=[46.52, 6.565],zoom_start=16,tiles='stamentoner')
 folium.TileLayer(tiles='openstreetmap').add_to(map)
+
+def add_circle_layer(circle_data, ref_point):
+	circle_layer = folium.FeatureGroup(name="Reference point " + str(ref_point))
+	for i, crl in enumerate(circle_data):
+		circle_layer.add_child(folium.Circle(
+			location=[crl['Lat'],crl['Lon']],
+			fill=False,
+			weight=5,
+			opacity=0.75,
+			radius=geo.distance(crl['ESP-mean']),
+			popup=	"Gateway: " + str(crl['EUI']) + "<br/>" +
+					"Variance: " + str(geo.deltax(crl['ESP-mean'],crl['ESP-var'])) + "<br/>"+
+					"+1 sigma: " + str(geo.distance(crl['ESP-mean'])-crl['ESP-var']) + "m<br/>" +
+					"-1 sigma: " + str(geo.distance(crl['ESP-mean'])+crl['ESP-var']) + "m<br/>" 
+			))
+		circle_layer.add_child(folium.Circle(
+			location=[crl['Lat'],crl['Lon']],
+			fill=False,
+			weight=3,
+			opacity=0.5,
+			radius=geo.distance(crl['ESP-mean']-3*crl['ESP-var']),
+			popup= "Gateway: " + str(crl['EUI']) + "<br/>" +
+					"+3Sigma"
+			))
+		circle_layer.add_child(folium.Circle(
+			location=[crl['Lat'],crl['Lon']],
+			fill=False,
+			weight=3,
+			opacity=0.5,
+			radius=geo.distance(crl['ESP-mean']+3*crl['ESP-var']),
+			popup= "Gateway: " + str(crl['EUI']) + "<br/>" +
+					"-3Sigma"
+			))
+
+	#add trilateration point
+	circle_layer.add_child(folium.Marker(location=coord_list[ref_point-3],popup="Ref point: "+str(ref_point),icon=folium.Icon(color='darkred',prefix='fa',icon='angle-double-down')))
+	map.add_child(circle_layer)
 
 #has to be called at the end to generate the map file
 def output_map(filename):

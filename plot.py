@@ -250,56 +250,125 @@ def distance_plot(point_list, gtw_list, gateway_eui):
 
 	plt.show()
 
-def exponential_func(x, a, b, c):
-    return a*np.exp(-b*x)+c
+def logfunc(x, a, b):
+    return a*np.log10(1/x)+b
 
 #plots all gateways on the same plot
-def distance_plot_all(point_list, gtw_list,txpow,sf):
+def distance_plot_all(point_list, fix1, fix2, fix3, fix4, fix5, fix6,gtw_list,txpow,sf):
+	#coord list of fixed measurement points
+	NB_FIXPOINTS = 6
+	coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053)]
+	fixed_points = [fix1, fix2, fix3, fix4, fix5, fix6]
+	fpts = []
 	pts = json.loads(point_list.decode('utf-8'))
+	for i in range(NB_FIXPOINTS):
+		fpts.append(json.loads(fixed_points[i].decode('utf-8')))
 	g_dict = json.loads(gtw_list.decode('utf-8'))
 
 	dist = []
-	rssi = []
-	esp = []
+	rssi_scatter = []
+	esp_scatter = []
+	rssi_all = []
+	esp_all = []
+	rssi_fixed = []
+	esp_fixed = []
 
-	
+
+	weight_scatter = len(pts)
+	fixpoint_weight = 3*int(weight_scatter / NB_FIXPOINTS)
 
 	gtw_coords = (0,0)
 	for g in g_dict:
 		gtw_coords = (g['gateway_lat'], g['gateway_lon'])
 
+		#store points of the scatter plot (all points at EPFL campus)
 		for p in pts:
 			for j, eui in enumerate(p['gateway_id']):
 				if g['gateway_id'] == p['gateway_id'][j]:
 					real_distance = geopy.distance.vincenty(gtw_coords,(p['gps_lat'],p['gps_lon'])).km * 1000
-
+					
 					#filter points with coords 0,0
-					if real_distance < 15000:
+					if real_distance < 10000:
 						dist.append(real_distance)
-						rssi.append(p['gateway_rssi'][j])
-						esp.append(p['gateway_esp'][j])
+						rssi_scatter.append(p['gateway_rssi'][j])
+						esp_scatter.append(p['gateway_esp'][j])
+						rssi_all.append(p['gateway_rssi'][j])
+						esp_all.append(p['gateway_esp'][j])
+						#to still correctly attribute the array to the distances, we have to fill these values with nan
+						rssi_fixed.append(np.nan)
+						esp_fixed.append(np.nan)
 						#print('Dist: '+str(real_distance)+ " | RSSI: "+str(p['gateway_rssi'][j]) + " | ESP: "+str(p['gateway_esp'][j]))
 
-	#rssifit = curve_fit(exponential_func, dist, rssi, p0=(1, 1e-6, 1))
-	#yy = exponential_func(dist, *rssifit)
+		#store fixed point mean values in the right weight
+		for i in range(NB_FIXPOINTS):
+			esp_cnt = 0
+			rssi_cnt = 0
+			cnt = 0
+			for p in fpts[i]:
+				for j, eui in enumerate(p['gateway_id']):
+					if g['gateway_id'] == p['gateway_id'][j]:
+						real_distance = geopy.distance.vincenty(gtw_coords,coord_list[i]).km * 1000
+						cnt += 1
+						rssi_cnt += p['gateway_rssi'][j]
+						esp_cnt += p['gateway_esp'][j]
+			if(cnt and real_distance < 10000):
+				rssi_mean = rssi_cnt / cnt
+				esp_mean = esp_cnt / cnt
+				for k in range(fixpoint_weight):
+					dist.append(real_distance)
+					rssi_scatter.append(np.nan)
+					esp_scatter.append(np.nan)
+					rssi_all.append(rssi_mean)
+					esp_all.append(esp_mean)
+					rssi_fixed.append(rssi_mean)
+					esp_fixed.append(esp_mean)
+
+
+	y_rssi = rssi_all
+	y_esp = esp_all
+	rssi_par = []
+	esp_par = []
+
+	xx = np.linspace(50,7000,2000)
+
+	popt_rssi, pcov_rssi = curve_fit(logfunc, dist, y_rssi)
+	popt_esp, pcov_esp = curve_fit(logfunc, dist, y_esp)
+
+	#standard deviation sigma
+	perr_rssi = np.sqrt(np.diag(pcov_rssi))
+	perr_esp = np.sqrt(np.diag(pcov_esp))
+
+	#format log parameters
+	for i in range(2):
+		rssi_par.append("{:2.2f}".format(popt_rssi[i]))
+		esp_par.append("{:2.2f}".format(popt_esp[i]))
+	
+	rssi_func = rssi_par[0]+"log(1/x)"+rssi_par[1]
+	esp_func = esp_par[0]+"log(1/x)"+esp_par[1]
 
 	plt.figure()
 	plt.subplot(211)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('RSSI')
-	plt.title('RSSI vs distance - SF12 - TXpower 0')
-	plt.scatter(dist, rssi)
-	#plt.plot(dist,yy)
+	plt.title('RSSI vs distance - SF'+ str(sf)+' - TXpower '+str(txpow))
+	plt.scatter(dist, rssi_scatter, marker="x", label="All campus")
+	plt.scatter(dist, rssi_fixed, marker="D", c='#ff7d00',label="Fixed points")
+	plt.plot(xx,logfunc(xx, *popt_rssi),c='r', label=rssi_func)
+	#plt.plot(xx,logfunc(xx,popt_rssi[0]-3*perr_rssi[0],popt_rssi[1]+3*perr_rssi[1]),c='g',label="+3sigma")
+	#plt.plot(xx,logfunc(xx,popt_rssi[0]+3*perr_rssi[0],popt_rssi[1]-3*perr_rssi[1]),c='g',label="-3sigma")
+	plt.legend()
 
-	#espfit = curve_fit(exponential_func, dist, esp, p0=(1, 1e-6, 1))
-	#yy = exponential_func(dist, *espfit)
 
 	plt.subplot(212)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('ESP')
-	plt.title('ESP vs distance - SF12 - TXpower 0')
-	plt.scatter(dist, esp)
-	#plt.plot(dist,yy)
+	plt.title('ESP vs distance - SF'+ str(sf)+' - TXpower '+str(txpow))
+	plt.scatter(dist, esp_scatter, marker="x", label="All campus")
+	plt.scatter(dist, esp_fixed, marker="D", c='#ff7d00',label="Fixed points")
+	plt.plot(xx,logfunc(xx, *popt_esp),c='r', label=esp_func)
+	#plt.plot(xx,logfunc(xx,popt_esp[0]-3*perr_esp[0],popt_esp[1]+3*perr_esp[1]),c='g',label="+3sigma")
+	#plt.plot(xx,logfunc(xx,popt_esp[0]+3*perr_esp[0],popt_esp[1]-3*perr_esp[1]),c='g',label="-3sigma")
+	plt.legend()
 
 	plt.show()
 
