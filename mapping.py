@@ -25,6 +25,7 @@ def add_circle_layer(circle_data, ref_point):
 					"+1 sigma: " + str(geo.distance(crl['ESP-mean'])-crl['ESP-var']) + "m<br/>" +
 					"-1 sigma: " + str(geo.distance(crl['ESP-mean'])+crl['ESP-var']) + "m<br/>" 
 			))
+		
 		circle_layer.add_child(folium.Circle(
 			location=[crl['Lat'],crl['Lon']],
 			fill=False,
@@ -43,6 +44,7 @@ def add_circle_layer(circle_data, ref_point):
 			popup= "Gateway: " + str(crl['EUI']) + "<br/>" +
 					"-3Sigma"
 			))
+			
 
 	#add trilateration point
 	circle_layer.add_child(folium.Marker(location=coord_list[ref_point-3],popup="Ref point: "+str(ref_point),icon=folium.Icon(color='darkred',prefix='fa',icon='angle-double-down')))
@@ -52,6 +54,24 @@ def add_circle_layer(circle_data, ref_point):
 def output_map(filename):
 	map.add_child(folium.LayerControl())
 	map.save(filename)
+
+def add_intersection_markers(markers,layer_name):
+	mrk = folium.FeatureGroup(name=layer_name)
+	for m in markers:
+		mrk.add_child(folium.Marker(location=m['Intersection'],icon=folium.Icon(color='green',prefix='fa',icon='crosshairs'),
+			popup=	"Gateway: "+str(m['Gateway'])+ "<br/>" +
+					"Distance: "+str(m['Closer distance'])+ "<br/>" +
+					"Variance: "+str(m['Closer variance'])+ "<br/>" +
+					"Distance (mean): "+str(m['Mean distance'])+ "<br/>" +
+					"Variance (mean): "+str(m['Mean variance'])+ "<br/>" +
+					"Sigma ring: "+str(m['Sigma ring'])
+					))
+	map.add_child(mrk)
+
+def add_marker(coordinates,layer_name):
+	mrk = folium.FeatureGroup(name=layer_name)
+	mrk.add_child(folium.Marker(location=[coordinates[0],coordinates[1]],icon=folium.Icon(color='red',prefix='fa',icon='bolt'),popup= layer_name))
+	map.add_child(mrk)
 
 def add_gateway_layer(gatewayList, layerName='Gateways'):
 	gtw = json.loads(gatewayList.decode('utf-8'))
