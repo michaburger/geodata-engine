@@ -107,12 +107,14 @@ def trilat_opt():
 		request_track.append(db.request_track(trk,0,7))
 
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
-	for k in range (0,100):
-		print("Random guess round: " +str(k+1))
-		best_params = [random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
+	for k in range (0,10000):
+		
+		best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
 		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+		
+		if(min_dist > 5): continue
+		print("Random guess round: " +str(k+1))
 		print("Initial guess: " + str(best_params))
-		if(min_dist > 10): continue
 		print("Initial minimum distance: "+str(min_dist))
 
 		#optimize every parameter locally
