@@ -4,7 +4,7 @@ import json
 import geopy.distance
 import math
 import plot
-import ml_engine as ml
+import random
 
 
 d2r = math.pi/180
@@ -83,6 +83,8 @@ def trilat_opt_foo(x,params,track, gateways):
 	#weights input
 	#output: distance 
 	w1,w2,w3,w4,w5,r1,r2 = params
+	#print("w1 ="+str(w1))
+	#print("w2 ="+str(w2))
 	distance = 0
 	#for every different track
 	for trk in x:
@@ -91,11 +93,11 @@ def trilat_opt_foo(x,params,track, gateways):
 		distance += geopy.distance.vincenty(mean,coord_list[trk-3]).km
 	return distance
 
+#custom optimization function
 def trilat_opt():
 	tracks = [3,4,5,6,7,8]
-	weight_array = []
-	for i in range (1,11):
-		weight_array.append(i/10.0)
+	step_size = 0.01
+	precision = 0.001
 
 	#speed up and poll db only once
 	request_track = []
@@ -105,25 +107,90 @@ def trilat_opt():
 		request_track.append(db.request_track(trk,0,7))
 
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
-	best_params = [1,1,1,1,1,3,3]
-	min_dist = trilat_opt_foo(tracks,(best_params[0],best_params[1],best_params[2],best_params[3],best_params[4],best_params[5],best_params[6]),request_track,request_gateways)
+	for k in range (0,100):
+		print("Random guess round: " +str(k+1))
+		best_params = [random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(0,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
+		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+		print("Initial guess: " + str(best_params))
+		if(min_dist > 10): continue
+		print("Initial minimum distance: "+str(min_dist))
 
-	for w1 in weight_array:
-		for w2 in weight_array:
-			for w3 in weight_array:
-				for w4 in weight_array:
-					for w5 in weight_array:
-						for w6 in weight_array:
-							for w7 in weight_array:
-								r1 = w6*5
-								r2 = w7*5
-								dist = trilat_opt_foo(tracks,(w1,w2,w3,w4,w5,r1,r2),request_track,request_gateways)
-								if(dist<min_dist):
-									min_dist = dist
-									best_params = [w1,w2,w3,w4,w5,r1,r2]
-	print("*******")
-	print("Best parameters: "+str(best_params))
-	print("Mean deviation: "+str(min_dist/len(tracks)))
+		#optimize every parameter locally
+		for i, par in enumerate(best_params):
+			#go in + direction until the optimum is reached
+			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways)>=min_dist):
+				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+				reset = best_params[i]
+				best_params[i] += step_size
+				#print("try parameters "+str(best_params))
+				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways)+precision>=last_optimum):
+					best_params[i] = reset
+					#adapt new global minimum
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+					#print("adapted minimum distance: "+str(min_dist))
+					break
+				else:
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+
+			#go in - direction
+			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways)>=min_dist):
+				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+				reset = best_params[i]
+				best_params[i] -= step_size
+				#print("try parameters "+str(best_params))
+				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways)+precision>=last_optimum):
+					best_params[i] = reset
+					#adapt new global minimum
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+					#print("adapted minimum distance: "+str(min_dist))
+					break
+				else:
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+
+			#print("Parameter "+str(i)+" optimized to "+str(best_params[i]))
+
+
+		print("Round "+str(k+1)+".1")
+		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+		print("Initial minimum distance: "+str(min_dist))
+
+		#optimize every parameter locally
+		for i, par in enumerate(best_params):
+			#go in + direction until the optimum is reached
+			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways)>=min_dist):
+				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+				reset = best_params[i]
+				best_params[i] += step_size
+				#print("try parameters "+str(best_params))
+				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways)+precision>=last_optimum):
+					best_params[i] = reset
+					#adapt new global minimum
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+					#print("adapted minimum distance: "+str(min_dist))
+					break
+				else:
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+
+			#go in - direction
+			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways)>=min_dist):
+				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+				reset = best_params[i]
+				best_params[i] -= step_size
+				#print("try parameters "+str(best_params))
+				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways)+precision>=last_optimum):
+					best_params[i] = reset
+					#adapt new global minimum
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+					#print("adapted minimum distance: "+str(min_dist))
+					break
+				else:
+					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
+
+		print("*******")
+		print("Best parameters: "+str(best_params))
+		print("Mean deviation: "+str(min_dist/len(tracks)))
+
+
 
 
 def trilateration(point_list, gateway_list, ref_point, filter):
