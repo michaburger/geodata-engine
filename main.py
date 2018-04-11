@@ -40,7 +40,7 @@ for cnt, g in enumerate(gtws):
 mapping.output_map('Map1-ESP-SF12.html')
 '''
 
-geo.trilat_opt()
+#geo.trilat_opt()
 
 '''
 #Trilateration graphic part with intersecting circles

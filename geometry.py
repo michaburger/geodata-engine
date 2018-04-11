@@ -95,6 +95,9 @@ def trilat_opt_foo(x,params,track, gateways):
 
 #custom optimization function
 def trilat_opt():
+	f = open('logfile.log','a')
+	f.write("Start\n")
+	f.close()
 	tracks = [3,4,5,6,7,8]
 	step_size = 0.01
 	precision = 0.001
