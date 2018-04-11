@@ -4,6 +4,8 @@ import json
 import geopy.distance
 import math
 import plot
+import ml_engine as ml
+
 
 d2r = math.pi/180
 coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053)]
@@ -76,7 +78,7 @@ def trilat_extract_info(point_list, gateway_list, ref_point):
 	return distance_data_dict
 
 #distance optimizing function over x (labelled trilateration tracks)
-def trilat_opt_foo(x,params):
+def trilat_opt_foo(x,params,track, gateways):
 	#x input: array/tensor with: lat, lon, all params
 	#weights input
 	#output: distance 
@@ -84,7 +86,7 @@ def trilat_opt_foo(x,params):
 	distance = 0
 	#for every different track
 	for trk in x:
-		intersections = trilateration(db.request_track(trk,0,7),db.request_gateways(30),trk,(r1,r2))
+		intersections = trilateration(track[trk-3],gateways,trk,(r1,r2))
 		mean = mean_coords(intersections,w1,w2,w3,w4,w5)
 		distance += geopy.distance.vincenty(mean,coord_list[trk-3]).km
 	return distance
@@ -95,24 +97,27 @@ def trilat_opt():
 	for i in range (1,11):
 		weight_array.append(i/10.0)
 
+	#speed up and poll db only once
+	request_track = []
+	request_gateways = db.request_gateways(30)
+
+	for trk in tracks:
+		request_track.append(db.request_track(trk,0,7))
+
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
 	best_params = [1,1,1,1,1,3,3]
-	min_dist = trilat_opt_foo(tracks,(best_params[0],best_params[1],best_params[2],best_params[3],best_params[4],best_params[5],best_params[6]))
+	min_dist = trilat_opt_foo(tracks,(best_params[0],best_params[1],best_params[2],best_params[3],best_params[4],best_params[5],best_params[6]),request_track,request_gateways)
 
 	for w1 in weight_array:
-		print("Param_loop1: "+str(w1))
 		for w2 in weight_array:
-			print("Param_loop2: "+str(w2))
 			for w3 in weight_array:
-				print("Param_loop3: "+str(w3))
 				for w4 in weight_array:
-					print("Param_loop4: "+str(w4))
 					for w5 in weight_array:
 						for w6 in weight_array:
 							for w7 in weight_array:
 								r1 = w6*5
 								r2 = w7*5
-								dist = trilat_opt_foo(tracks,(w1,w2,w3,w4,w5,r1,r2))
+								dist = trilat_opt_foo(tracks,(w1,w2,w3,w4,w5,r1,r2),request_track,request_gateways)
 								if(dist<min_dist):
 									min_dist = dist
 									best_params = [w1,w2,w3,w4,w5,r1,r2]
