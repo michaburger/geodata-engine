@@ -77,6 +77,10 @@ def trilat_extract_info(point_list, gateway_list, ref_point):
 	#print(distance_data_dict)
 	return distance_data_dict
 
+def dist_to_gtw():
+	for ref_point_coord in coord_list:
+		print(geopy.distance.vincenty((46.518276,6.571668),ref_point_coord))
+
 #distance optimizing function over x (labelled trilateration tracks)
 def trilat_opt_foo(x,params,track, gateways):
 	#x input: array/tensor with: lat, lon, all params
@@ -90,6 +94,7 @@ def trilat_opt_foo(x,params,track, gateways):
 	for trk in x:
 		intersections = trilateration(track[trk-3],gateways,trk,(r1,r2))
 		mean = mean_coords(intersections,w1,w2,w3,w4,w5)
+		print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000))
 		distance += geopy.distance.vincenty(mean,coord_list[trk-3]).km
 	return distance
 
@@ -110,9 +115,10 @@ def trilat_opt():
 		request_track.append(db.request_track(trk,0,7))
 
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
-	for k in range (0,1000000):
+	for k in range (0,1):
 		
-		best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
+		best_params = [1.0, 0.2, 0.2, 0.2, -1.0, 3.2, 2.5]
+		#best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
 		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways)
 		
 		if(min_dist > 5): continue
