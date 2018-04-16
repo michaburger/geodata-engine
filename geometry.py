@@ -264,7 +264,7 @@ def trilat_opt():
 		f = open('logfile.log','a')
 		f.write("******\n")
 		f.write("Best parameters: "+str(best_params)+"\n")
-		f.writ("Gateway weights: "+str(gtw_weights))
+		f.write("Gateway weights: "+str(gtw_weights))
 		f.write("Mean deviation: "+str(min_dist/len(tracks))+"\n")
 		f.close()
 
