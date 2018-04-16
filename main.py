@@ -43,6 +43,7 @@ mapping.output_map('Map1-ESP-SF12.html')
 #geo.dist_to_gtw()
 geo.trilat_opt()
 
+
 '''
 #Trilateration graphic part with intersecting circles
 mapping.add_gateway_layer(db.request_gateways(25))
