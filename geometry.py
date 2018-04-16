@@ -245,7 +245,6 @@ def trilat_opt():
 
 			#optimize gateway weights - go in negative direction
 			for gtw in gtw_weights:
-				print(gtw)
 				while(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)>=min_dist):
 					last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 					reset = gtw_weights[gtw]
