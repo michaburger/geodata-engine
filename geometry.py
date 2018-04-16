@@ -102,7 +102,7 @@ def trilat_opt_foo(x,params,track,gateways,gtw_weights):
 def trilat_opt():
 	tracks = [3,4,5,6,7,8]
 	step_size = 0.01
-	precision = 0.001
+	precision = 0.0001
 
 	#speed up and poll db only once
 	request_track = []
