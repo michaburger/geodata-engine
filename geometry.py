@@ -123,7 +123,7 @@ def trilat_opt():
 		#best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
 		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 		
-		if(min_dist > 5): continue
+		#if(min_dist > 5): continue
 		print("Random guess round: " +str(k+1))
 		print("Initial guess: " + str(best_params))
 		print("Initial minimum distance: "+str(min_dist))
@@ -405,7 +405,7 @@ def mean_coords(intersect_points,w1,w2,w3,w4,w5,gtw_weights):
 		gtw2_weight = gtw_weights[i['Gateways'][1]]
 
 		c+=1
-		multiplier = (w1*dist_n + w2*var_n + w3*ring_n + w4*dist_m_n + w5*var_m_n) * gtw1_weight*gtw2_weight
+		multiplier = w1*dist_n + w2*var_n + w3*ring_n + w4*dist_m_n + w5*var_m_n + gtw1_weight*gtw2_weight
 		param_sum += multiplier
 
 		lat_t += i['Intersection'][0]*multiplier
