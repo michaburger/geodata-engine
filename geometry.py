@@ -94,14 +94,14 @@ def trilat_opt_foo(x,params,track,gateways,gtw_weights):
 	for trk in x:
 		intersections = trilateration(track[trk-3],gateways,trk,(r1,r2))
 		mean = mean_coords(intersections,w1,w2,w3,w4,w5,gtw_weights)
-		#print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000))
-		distance += geopy.distance.vincenty(mean,coord_list[trk-3]).km
+		print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000))
+		distance += np.power(geopy.distance.vincenty(mean,coord_list[trk-3]).km,2)
 	return distance
 
 #custom optimization function
 def trilat_opt():
 
-	f = open('/data/logfile.log','a')
+	f = open('data/logfile.log','a')
 	f.write("Starting\n")
 	f.close()
 
@@ -115,7 +115,7 @@ def trilat_opt():
 	#gtw_weights = {}
 
 	#set from best values
-	gtw_weights = {'0B030153': 14.7, '080E04C4': 0, '080E1006': 1, '080E0D60': 1, '080E0669': 3.7, '080E0FF3': -0.6, '080E1007': 1.1, '080E05AD': -3.3}
+	gtw_weights = {'0B030153': 14.7, '080E04C4': -0.01, '080E1006': 1, '080E0D60': 1, '080E0669': 3.59, '080E0FF3': -0.6, '080E1007': 1.28, '080E05AD': -3.32}
 
 	for trk in tracks:
 		request_track.append(db.request_track(trk,0,7))
@@ -129,10 +129,11 @@ def trilat_opt():
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
 	for k in range (0,1):
 		
-		best_params = [1.0, 0.2, 0.2, 0.2, -1.0, 3.2, 2.5]
+		best_params = [1.0, 0.21, 0.2, 0.2, -1.0, 3.2, 2.53]
 		#best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
 		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 		
+		return
 		#if(min_dist > 5): continue
 		print("Random guess round: " +str(k+1))
 		print("Initial guess: " + str(best_params))
@@ -207,7 +208,7 @@ def trilat_opt():
 		print("Gateway weights: "+str(gtw_weights))
 		print("Mean deviation: "+str(min_dist/len(tracks)))
 
-		f = open('/data/logfile.log','a')
+		f = open('data/logfile.log','a')
 		f.write("******\n")
 		f.write("Best parameters: "+str(best_params)+"\n")
 		f.write("Gateway weights: "+str(gtw_weights))
