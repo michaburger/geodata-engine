@@ -94,9 +94,9 @@ def trilat_opt_foo(x,params,track,gateways,gtw_weights):
 	for trk in x:
 		intersections = trilateration(track[trk-3],gateways,trk,(r1,r2))
 		mean = mean_coords(intersections,w1,w2,w3,w4,w5,gtw_weights)
-		print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000))
+		#print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000))
 		distance += np.power(geopy.distance.vincenty(mean,coord_list[trk-3]).km,2)
-	return distance
+	return np.sqrt(distance)
 
 #custom optimization function
 def trilat_opt():
@@ -133,7 +133,6 @@ def trilat_opt():
 		#best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
 		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 		
-		return
 		#if(min_dist > 5): continue
 		print("Random guess round: " +str(k+1))
 		print("Initial guess: " + str(best_params))
