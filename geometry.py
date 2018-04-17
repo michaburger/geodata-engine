@@ -102,24 +102,29 @@ def trilat_opt_foo(x,params,track,gateways,gtw_weights):
 def trilat_opt():
 
 	f = open('/data/logfile.log','a')
-	f.write("Starting")
+	f.write("Starting\n")
 	f.close()
 
 	tracks = [3,4,5,6,7,8]
 	step_size = 0.01
-	precision = 0.0001
+	precision = 0.001
 
 	#speed up and poll db only once
 	request_track = []
 	request_gateways = db.request_gateways(30)
-	gtw_weights = {}
+	#gtw_weights = {}
+
+	#set from best values
+	gtw_weights = {'0B030153': 14.7, '080E04C4': 0, '080E1006': 1, '080E0D60': 1, '080E0669': 3.7, '080E0FF3': -0.6, '080E1007': 1.1, '080E05AD': -3.3}
 
 	for trk in tracks:
 		request_track.append(db.request_track(trk,0,7))
 		#establish gateway weight table
 		intersections = trilateration(request_track[trk-3],request_gateways,trk,(3,3))
-		gateway_weight_add_gateway(gtw_weights,intersections)
+		#gateway_weight_add_gateway(gtw_weights,intersections)
 	#print(gtw_weights)
+
+
 
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
 	for k in range (0,1):
@@ -133,7 +138,7 @@ def trilat_opt():
 		print("Initial guess: " + str(best_params))
 		print("Initial minimum distance: "+str(min_dist))
 
-		'''
+		
 		#optimize every parameter locally
 		for i, par in enumerate(best_params):
 			#go in + direction until the optimum is reached
@@ -165,14 +170,16 @@ def trilat_opt():
 					break
 				else:
 					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-			'''
+			
 
 		#optimize gateway weights
 		for gtw in gtw_weights:
+			print("> optimize gateway: "+str(gtw))
 			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)>=min_dist):
 				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 				reset = gtw_weights[gtw]
 				gateway_weight_adpt(gtw_weights,gtw,reset+step_size)
+				print(gtw+": "+str(gtw_weights[gtw])+" Last optimum: "+str(last_optimum))
 
 				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)+precision>=last_optimum):
 					gateway_weight_adpt(gtw_weights,gtw,reset)
@@ -186,75 +193,7 @@ def trilat_opt():
 				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 				reset = gtw_weights[gtw]
 				gateway_weight_adpt(gtw_weights,gtw,reset-step_size)
-
-				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)+precision>=last_optimum):
-					gateway_weight_adpt(gtw_weights,gtw,reset)
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-					break
-				else:
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-
-
-			#print("Parameter "+str(i)+" optimized to "+str(best_params[i]))
-
-
-		print("Round "+str(k+1)+".1")
-		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-		print("Initial minimum distance: "+str(min_dist))
-
-		'''
-		#optimize every parameter locally
-		for i, par in enumerate(best_params):
-			#go in + direction until the optimum is reached
-			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)>=min_dist):
-				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-				reset = best_params[i]
-				best_params[i] += step_size
-				#print("try parameters "+str(best_params))
-				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)+precision>=last_optimum):
-					best_params[i] = reset
-					#adapt new global minimum
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-					#print("adapted minimum distance: "+str(min_dist))
-					break
-				else:
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-
-			#go in - direction
-			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)>=min_dist):
-				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-				reset = best_params[i]
-				best_params[i] -= step_size
-				#print("try parameters "+str(best_params))
-				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)+precision>=last_optimum):
-					best_params[i] = reset
-					#adapt new global minimum
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-					#print("adapted minimum distance: "+str(min_dist))
-					break
-				else:
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-			'''
-		#optimize gateway weights
-		for gtw in gtw_weights:
-			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)>=min_dist):
-				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-				reset = gtw_weights[gtw]
-				gateway_weight_adpt(gtw_weights,gtw,reset+step_size)
-
-				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)+precision>=last_optimum):
-					gateway_weight_adpt(gtw_weights,gtw,reset)
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-					break
-				else:
-					min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-
-		#optimize gateway weights - go in negative direction
-
-			while(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)>=min_dist):
-				last_optimum = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
-				reset = gtw_weights[gtw]
-				gateway_weight_adpt(gtw_weights,gtw,reset-step_size)
+				print(gtw+": "+str(gtw_weights[gtw])+" Last optimum: "+str(last_optimum))
 
 				if(trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)+precision>=last_optimum):
 					gateway_weight_adpt(gtw_weights,gtw,reset)

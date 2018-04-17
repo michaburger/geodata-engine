@@ -37,7 +37,7 @@ for cnt, g in enumerate(gtws):
 #mapping.add_heatmap(db.request_track(1))
 
 #output map
-mapping.output_map('Map1-ESP-SF12.html')
+mapping.output_map('Map1-ESP-SF12.html)
 '''
 
 #geo.dist_to_gtw()
