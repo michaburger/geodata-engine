@@ -101,7 +101,7 @@ def trilat_opt_foo(x,params,track,gateways,gtw_weights):
 #custom optimization function
 def trilat_opt():
 
-	f = open('data/logfile.log','a')
+	f = open('/data/logfile.log','a')
 	f.write("Starting")
 	f.close()
 
@@ -268,7 +268,7 @@ def trilat_opt():
 		print("Gateway weights: "+str(gtw_weights))
 		print("Mean deviation: "+str(min_dist/len(tracks)))
 
-		f = open('data/logfile.log','a')
+		f = open('/data/logfile.log','a')
 		f.write("******\n")
 		f.write("Best parameters: "+str(best_params)+"\n")
 		f.write("Gateway weights: "+str(gtw_weights))
