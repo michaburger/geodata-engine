@@ -8,7 +8,7 @@ import random
 
 
 d2r = math.pi/180
-coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053)]
+coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053),(46.517691, 6.566369),(46.518215, 6.563403),(46.521293, 6.568626)]
 
 #returns the approximate distance in meters according to trilateration report, April 2018
 def distance(esp):
@@ -94,9 +94,9 @@ def trilat_opt_foo(x,params,track,gateways,gtw_weights):
 	for trk in x:
 		intersections = trilateration(track[trk-3],gateways,trk,(r1,r2))
 		mean = mean_coords(intersections,w1,w2,w3,w4,w5,gtw_weights)
-		#print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000))
-		distance += np.power(geopy.distance.vincenty(mean,coord_list[trk-3]).km,2)
-	return np.sqrt(distance)
+		print("Ref point: "+str(trk)+" deviation: "+str(geopy.distance.vincenty(mean,coord_list[trk-3]).km*1000)+" Mean coords: "+str(mean))
+		distance += geopy.distance.vincenty(mean,coord_list[trk-3]).km
+	return distance
 
 #custom optimization function
 def trilat_opt():
@@ -105,7 +105,7 @@ def trilat_opt():
 	f.write("Starting\n")
 	f.close()
 
-	tracks = [3,4,5,6,7,8]
+	tracks = [3,4,5,6,7,8,9,10,11]
 	step_size = 0.01
 	precision = 0.001
 
@@ -115,7 +115,7 @@ def trilat_opt():
 	#gtw_weights = {}
 
 	#set from best values
-	gtw_weights = {'0B030153': 14.7, '080E04C4': -0.01, '080E1006': 1, '080E0D60': 1, '080E0669': 3.59, '080E0FF3': -0.6, '080E1007': 1.28, '080E05AD': -3.32}
+	gtw_weights = {'0B030153': 14.7, '080E04C4': 0.01, '080E1006': 1, '080E0D60': 1.1, '080E0669': 3.35, '080E0FF3': -0.6, '080E1007': 1.38, '080E05AD': -3.32}
 
 	for trk in tracks:
 		request_track.append(db.request_track(trk,0,7))
@@ -129,10 +129,11 @@ def trilat_opt():
 	#try: minimize trilat_opt_foo over all labelled tracks with brute-force
 	for k in range (0,1):
 		
-		best_params = [1.0, 0.21, 0.2, 0.2, -1.0, 3.2, 2.53]
+		best_params = [1.0, 0.22, 0.3, 0.2, -1.0, 3.2, 2.53]
 		#best_params = [random.randint(50,1000)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(-50,50)/50.0,random.randint(10,40)/10.0,random.randint(10,40)/10.0]
 		min_dist = trilat_opt_foo(tracks,best_params,request_track,request_gateways,gtw_weights)
 		
+		return
 		#if(min_dist > 5): continue
 		print("Random guess round: " +str(k+1))
 		print("Initial guess: " + str(best_params))

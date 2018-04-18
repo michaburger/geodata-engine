@@ -12,6 +12,8 @@ import geopy.distance
 import seaborn as sns
 import re
 
+coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053),(46.517691, 6.566369),(46.518215, 6.563403),(46.521293, 6.568626)]
+
 def temperature_rssi(data, plot_title):
 	bunch = json.loads(data.decode('utf-8'))
 	LRRs = ['0B030153','080E0FF2','080E05AD','080E04C4','080E05AD','080E1006','080E0669','080E1007','080E0FF2','080E1005']
@@ -112,9 +114,6 @@ def trilat_quick_plot(gateway_list, point_list, ref_point,txpow,sf):
 
 	p_dict = json.loads(point_list.decode('utf-8'))
 	g_dict = json.loads(gateway_list.decode('utf-8'))
-
-	#list of all the fixed trilateration points. First ID: Track 3
-	coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053)]
 
 	#print(p_dict)
 	#print(g_dict)
@@ -257,7 +256,6 @@ def logfunc(x, a, b):
 def distance_plot_all(point_list, fix1, fix2, fix3, fix4, fix5, fix6,gtw_list,txpow,sf):
 	#coord list of fixed measurement points
 	NB_FIXPOINTS = 6
-	coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053)]
 	fixed_points = [fix1, fix2, fix3, fix4, fix5, fix6]
 	fpts = []
 	pts = json.loads(point_list.decode('utf-8'))

@@ -83,11 +83,10 @@ plot.distance_plot_all(db.request_track(20,txpow,sf),db.request_track(3,txpow,sf
 '''
 
 '''
-sf = 9
-txpow = 5
-for i in range(9):
-	if i in range(4,7):
-		print("******************************")
-		print("Trilateration point #" +str(i))
-		plot.trilat_quick_plot(db.request_gateways(30),db.request_track(i,txpow,sf),i,txpow,sf)
+sf = 7
+txpow = 0
+for i in range(9,12):
+	print("******************************")
+	print("Trilateration point #" +str(i))
+	plot.trilat_quick_plot(db.request_gateways(30),db.request_track(i,txpow,sf),i,txpow,sf)
 '''
