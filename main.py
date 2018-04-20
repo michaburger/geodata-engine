@@ -3,7 +3,7 @@ import database as db
 import mapping
 import plot
 import geometry as geo
-#import ml_engine as ml
+import fingerprinting as fp
 
 import csv
 
@@ -41,7 +41,7 @@ mapping.output_map('Map1-ESP-SF12.html)
 '''
 
 #geo.dist_to_gtw()
-geo.trilat_opt()
+#geo.trilat_opt()
 
 
 '''
@@ -61,16 +61,20 @@ for ref_point in range (3,9):
 mapping.output_map('Circles.html')
 '''
 
-'''
+#compare the effect of multiple devices
+#plot.device_comparison(db.request_track(9,0,7,'78AF580300000485'),db.request_track(9,0,7,'78AF580300000506'))
+
 #weather condition plots
 #plot.time_graph_rssi(db.request_track_no_params(2,"2018-03-15_15:00:00","2018-03-21_00:00:00"),"Weather conditions 15.3.2018 to 20.3.2018")
 #plot.time_graph_rssi(db.request_track_no_params(2,"2018-03-09_17:00:00","2018-03-12_00:00:00"),"Weather conditions 9.3.2018")
 #plot.time_graph_rssi(db.request_track_no_params(2,"2018-03-27_17:00:00","2018-03-28_10:00:00"),"Weather conditions 28.3.2018")
 
+
 #Start measures with SF7
 #plot.time_graph_rssi(db.request_track(2,0,7,"2018-04-03_16:00:00","2018-04-05_10:00:00"),"Weather conditions 4.3.2018")
+#plot.time_graph_rssi(db.request_track(2,0,7,"2018-04-18_17:00:00","2018-04-19_10:00:00"),"Weather conditions 18.4.2018")
 #plot.temperature_rssi(db.request_track(2),"RSSI vs Weather conditions SF7")
-'''
+
 
 '''
 #plot.distance_plot(db.request_track(20,5,7),db.request_gateways(30),'0B030153')
@@ -90,3 +94,9 @@ for i in range(9,12):
 	print("Trilateration point #" +str(i))
 	plot.trilat_quick_plot(db.request_gateways(30),db.request_track(i,txpow,sf),i,txpow,sf)
 '''
+
+
+#20.4.2018 - Start ML algorithms
+
+#First exercise - create set set with n*10 random measures out of one track.
+fp.create_dataset(db.request_track(4),dataset_size=1,nb_measures=3)

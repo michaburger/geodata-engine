@@ -12,7 +12,7 @@ import geopy.distance
 import seaborn as sns
 import re
 
-coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053),(46.517691, 6.566369),(46.518215, 6.563403),(46.521293, 6.568626)]
+coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053),(46.518912, 6.566103),(46.518215, 6.563403),(46.521293, 6.568626)]
 
 def temperature_rssi(data, plot_title):
 	bunch = json.loads(data.decode('utf-8'))
@@ -251,6 +251,9 @@ def distance_plot(point_list, gtw_list, gateway_eui):
 
 def logfunc(x, a, b):
     return a*np.log10(1/x)+b
+
+def device_comparison(track_dev1,track_dev2):
+	print(track_dev1)
 
 #plots all gateways on the same plot
 def distance_plot_all(point_list, fix1, fix2, fix3, fix4, fix5, fix6,gtw_list,txpow,sf):

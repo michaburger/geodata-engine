@@ -8,13 +8,13 @@ TIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
 starttime = dt.datetime.now() - dt.timedelta(days=365)
 
 
-def request_track(track,txpow=0,sf=7,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
-	url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow)
+def request_track(track,txpow=0,sf=7,dev='78AF580300000485',start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
+	url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&device=" + str(dev)
 	req = urllib.request.Request(url)
 	r = urllib.request.urlopen(req).read()
 	return r
 
-def request_track_no_params(track,sf=12,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
+def request_track_no_params(track,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
 	url = track_query_url + str(track) + "&start=" + start + "&end=" + end
 	req = urllib.request.Request(url)
 	r = urllib.request.urlopen(req).read()
