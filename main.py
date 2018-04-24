@@ -2,6 +2,7 @@ import datetime
 import database as db
 import mapping
 import plot
+import numpy as np
 import geometry as geo
 import fingerprinting as fp
 
@@ -98,5 +99,51 @@ for i in range(9,12):
 
 #20.4.2018 - Start ML algorithms
 
-#First exercise - create set set with n*10 random measures out of one track.
-fp.create_dataset(db.request_track(4),dataset_size=1,nb_measures=3)
+'''
+#jaccard index inside tracks and between tracks
+d_size = 100
+for track1 in range(3,12):
+	for track2 in range(3,12):
+		c = 0
+		d = 0
+		dataset1 = fp.create_dataset(db.request_track(track1),dataset_size=d_size,nb_measures=30)
+		dataset2 = fp.create_dataset(db.request_track(track2),dataset_size=d_size,nb_measures=30)
+		#calculate mean
+		for p1 in dataset1:
+			for p2 in dataset2:
+				c += fp.jaccard_index(p1,p2)
+		mean = c / (d_size**2)
+
+		
+		#calculate stdev
+		for p1 in dataset1:
+			for p2 in dataset2:
+				d += (fp.jaccard_index(p1,p2)-mean)**2
+		var = d / (d_size**2)
+		sigma = np.sqrt(var)
+		
+		print(str(mean)+"\t",end="")
+	print("")
+'''
+
+#24.4.2018 Tensorflow
+
+#create gateway array including office gateways
+def gateway_list():
+	trk_array = []
+	for i in range (3,12):
+		trk_array.append(db.request_track(i))
+	trk_array.append(db.request_track(20))
+	gtws = fp.get_gateways(trk_array)
+	return gtws
+
+reference_gateways = gateway_list()
+trk_array = []
+nb_tracks = 9
+for i in range (3,3+nb_tracks):
+	trk_array.append(db.request_track(i))
+
+training_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=20,nb_measures=20)
+testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=5,nb_measures=20)
+
+fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways))
