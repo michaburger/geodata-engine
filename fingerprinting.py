@@ -5,10 +5,13 @@ import tensorflow.contrib.eager as tfe
 import random
 import json
 import os
+import database as db
 import matplotlib.pyplot as plt 
+from time import time
+from operator import itemgetter, attrgetter
 
 
-tf.enable_eager_execution()
+#tf.enable_eager_execution()
 
 def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	'''
@@ -30,7 +33,6 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 		nb_measures = kwargs['nb_measures']
 
 	compilation = []
-	labels = []
 
 	for trk_json in track_array_json:
 		trk_dict = create_dataset(trk_json,dataset_size=dataset_size,nb_measures=nb_measures)
@@ -40,12 +42,64 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
-					tensor.append(p['Gateways'][eui])
+						#create flat output
+						tensor.append(p['Gateways'][eui][0])
+						tensor.append(p['Gateways'][eui][2])
 				else:
-					tensor.append([np.nan,np.nan,np.nan])
-			compilation.append(tensor)
-			labels.append(p['Track'])
-	return compilation, labels
+					for i in range(2):
+						tensor.append(np.nan)
+			compilation.append({"Data":tensor,"Label":p['Track']})
+	#create random order
+	random.shuffle(compilation)
+
+	#create output arrays wich have the same order
+	data = []
+	labels = []
+	for point in compilation:
+		data.append(point['Data'])
+		labels.append(point['Label'])
+
+	return data, labels
+
+
+def jaccard_classifier(input_track, **kwargs):
+	'''
+	@summary: Track classification engine based on jaccard similarity
+	@param input_track: the input track to classify
+	@kwargs d_size: how many points the comparison dataset will contain per track. 
+	@kwrgs nb_iter: on how many examples the mean is calculated
+	@kwargs nb_measures: over how many random points the comparison dataset item is generated
+	@result: tuple (most likely track, similarity index)
+	'''
+	d_size = 100
+	nb_iter = 1
+	nb_measures = 30
+	if 'd_size' in kwargs:
+		d_size = kwargs['d_size']
+	if 'nb_measures' in kwargs:
+		nb_measures = kwargs['nb_measures']
+	if 'nb_iter' in kwargs:
+		nb_iter = kwargs['nb_iter']
+
+	similarity = []
+
+	for i in range(nb_iter):
+		for trk_comp in range(3,12):
+			comparison_dataset = create_dataset(db.request_track(trk_comp),dataset_size=d_size,nb_measures=nb_measures)
+			c = 0
+			for p1 in input_track:
+				for p2 in comparison_dataset:
+					c += jaccard_index(p1,p2)
+			mean = c / (d_size**2)
+			if i == 0:
+				similarity.append(mean)
+			else:
+				similarity[trk_comp-3] += mean
+	similarity_list = []
+	for i,sim in enumerate(similarity):
+		similarity_list.append((i+3,sim/nb_iter))
+	similarity_list.sort(key=itemgetter(1),reverse=True)
+	return(similarity_list[0])
 				
 
 
@@ -69,8 +123,6 @@ def create_dataset(track_json, **kwargs):
 
 	if nb_measures > len(track):
 		nb_measures = len(track)
-	if dataset_size > len(track):
-		dataset_size = len(track)
 
 	dataset = []
 
@@ -107,7 +159,7 @@ def create_dataset(track_json, **kwargs):
 			gtw_info.update({u:[gtw_info[u][0],np.sqrt(q[u][0]/q[u][1]),t[u][1]/freq_count]})
 
 		#create the dataset
-		dataset.append({'Track':track[k]['track_ID'],'Position':(track[k]['gps_lat'],track[k]['gps_lon']),'Gateways':gtw_info})
+		dataset.append({'Track':track[k]['track_ID']-3,'Position':(track[k]['gps_lat'],track[k]['gps_lon']),'Gateways':gtw_info})
 
 	return dataset
 
@@ -170,32 +222,55 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(training, testing, nb_tracks, nb_gtw):
+def neuronal_classification(dataset, nb_tracks, nb_gtw, train_test):
+
+	#Remark: For a faster processing with GPU, this should be done with tf datasets
+	'''
 	training_set = tf.data.Dataset.from_tensor_slices(training)
 	testing_set = tf.data.Dataset.from_tensor_slices(testing)
 	
 	#create random order
 	training_set = training_set.shuffle(buffer_size=1000)
 	testing_set = testing_set.shuffle(buffer_size=1000)
+	'''
+	if train_test > 1 or train_test < 0:
+		return "ERROR: Impossible train-test ratio"
 
-	features, label = tfe.Iterator(training_set).next()
-	print("example features:", features)
-	print("example label:", label)
+	train_len = int(train_test*len(dataset[0]))
+
+	#array: 0-data, 1-labels
+	training_set = (np.array(dataset[0][:train_len]),np.array(dataset[1][:train_len]))
+	testing_set = (np.array(dataset[0][train_len:]),np.array(dataset[1][train_len:]))
+
+	# Convert labels to categorical one-hot encoding
+	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_tracks)
+	one_hot_labels_test = tf.keras.utils.to_categorical(testing_set[1], num_classes=nb_tracks)
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential([
-		tf.keras.layers.Dense(100, activation="relu", input_shape=(nb_gtw,)),
-		tf.keras.layers.Dense(100, activation="relu"),
-		tf.keras.layers.Dense(nb_tracks) #output layer
+		tf.keras.layers.Dense(44, activation="relu", input_shape=(nb_gtw*2,)),
+		tf.keras.layers.Dense(20),
+		tf.keras.layers.Dense(nb_tracks, activation = "softmax") #output layer
 		])
 	#print the summary of the model
-	model.summary()
+	#model.summary()
 
 	model.compile(
-		optimizer = "adadelta",
-		loss = "binary_crossentropy",
+		#for a multi-class classification problem
+		optimizer = "rmsprop",
+		loss = "categorical_crossentropy",
 		metrics = ["accuracy"]
 	)
 
-	#results = model.fit(
-	#	)
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(time()))
+
+	results = model.fit(
+		training_set[0], one_hot_labels_train,
+		#parameters defining the speed of converging
+		epochs=1,
+		batch_size=32,
+		validation_data=(testing_set[0],one_hot_labels_test),
+		callbacks=[tensorboard]
+		)
+
+	return np.mean(results.history["acc"]), np.mean(results.history["val_acc"])
