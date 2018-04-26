@@ -6,6 +6,7 @@ import random
 import numpy as np
 import geometry as geo
 import fingerprinting as fp
+import sys
 
 import csv
 
@@ -127,15 +128,19 @@ for track1 in range(3,12):
 		print(str(mean)+"\t",end="")
 	print("")
 '''
+
+'''
 #test accuracy of jaccard classifier
-d_size = 100
-nb_iter = 1
+d_size = 1000
+nb_iter = 3
 nb_measures = 20
-nb_tests = 100
+nb_tests = 20
 
 correct_classifications = 0
 wrongly_classified_tracks = []
 for t in range(nb_tests):
+	print(".",end="")
+	sys.stdout.flush() #display point immediately
 	#generate test track
 	trk_nb = random.randint(3,11)
 	#print("Test #"+str(t+1)+", Track: "+str(trk_nb))
@@ -146,7 +151,7 @@ for t in range(nb_tests):
 		wrongly_classified_tracks.append((trk_nb,)+classification)
 
 accuracy = 100.0*correct_classifications/nb_tests
-print("************************************")
+print("\n************************************")
 print("***ACCURACY OF JACCARD CLASSIFIER***")
 print("Dataset size: "+str(d_size))
 print("Measures per dataset: "+str(nb_measures))
@@ -155,16 +160,16 @@ print("Number of test samples: "+str(nb_tests))
 print("ACCURACY: "+str(accuracy)+"%")
 print("Wrongly classified tracks: (correct track, classification, jaccard index) \n"+str(wrongly_classified_tracks))
 print("************************************")
-
-
 '''
+
+
 #24.4.2018 Tensorflow
 
 #create gateway array including office gateways
 def gateway_list():
 	trk_array = []
 	for i in range (3,12):
-		trk_array.append(db.request_track(i,0,7,'78AF580300000485'))
+		trk_array.append(db.request_track(i))
 	trk_array.append(db.request_track(20))
 	gtws = fp.get_gateways(trk_array)
 	return gtws
@@ -174,13 +179,16 @@ reference_gateways = gateway_list()
 trk_array = []
 nb_tracks = 9
 for i in range (3,3+nb_tracks):
-	trk_array.append(db.request_track(i,0,7,'78AF580300000485'))
+	trk_array.append(db.request_track(i))
 
-dataset = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=150,nb_measures=30)
+dataset = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=20000,nb_measures=20)
 
-acc, val_acc = fp.neuronal_classification(dataset,nb_tracks,len(reference_gateways),0.8)
+#prediction test
+prediction = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=1,nb_measures=20)
+
+acc, val_acc = fp.neuronal_classification(dataset,prediction,nb_tracks,len(reference_gateways),0.5)
 print(str(acc)+", "+str(val_acc))
-'''
+
 
 '''
 #output results in table format

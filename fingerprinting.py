@@ -8,6 +8,7 @@ import os
 import database as db
 import matplotlib.pyplot as plt 
 from time import time
+import sys
 from operator import itemgetter, attrgetter
 
 
@@ -42,12 +43,9 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
-						#create flat output
-						tensor.append(p['Gateways'][eui][0])
-						tensor.append(p['Gateways'][eui][2])
+					tensor.append(p['Gateways'][eui])
 				else:
-					for i in range(2):
-						tensor.append(np.nan)
+					tensor.append([0,0,0])
 			compilation.append({"Data":tensor,"Label":p['Track']})
 	#create random order
 	random.shuffle(compilation)
@@ -101,7 +99,42 @@ def jaccard_classifier(input_track, **kwargs):
 	similarity_list.sort(key=itemgetter(1),reverse=True)
 	return(similarity_list[0])
 				
+def jaccard_classifier_best(input_track, **kwargs):
+	'''
+	@summary: Track classification engine based on jaccard similarity
+	@param input_track: the input track to classify
+	@kwargs d_size: how many points the comparison dataset will contain per track. 
+	@kwrgs nb_iter: on how many examples the mean is calculated
+	@kwargs nb_measures: over how many random points the comparison dataset item is generated
+	@result: tuple (most likely track, similarity index)
+	'''
+	d_size = 100
+	nb_iter = 1
+	nb_measures = 30
+	if 'd_size' in kwargs:
+		d_size = kwargs['d_size']
+	if 'nb_measures' in kwargs:
+		nb_measures = kwargs['nb_measures']
+	if 'nb_iter' in kwargs:
+		nb_iter = kwargs['nb_iter']
 
+	for i in range(nb_iter):
+		similarity = []
+		print(".",end="")
+		sys.stdout.flush() #display point immediately
+		for trk_comp in range(3,12):
+			comparison_dataset = create_dataset(db.request_track(trk_comp),dataset_size=d_size,nb_measures=nb_measures)
+			c = 0
+			for p1 in input_track:
+				for p2 in comparison_dataset:
+					c += jaccard_index(p1,p2)
+			mean = c / (d_size**2)
+			similarity.append((trk_comp,mean))
+		similarity.sort(key=itemgetter(1),reverse=True)
+		print(similarity[0])
+		print(similarity[1])
+	#if best value not reached...
+	return(similarity[0])
 
 def create_dataset(track_json, **kwargs):
 	'''
@@ -222,7 +255,7 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(dataset, nb_tracks, nb_gtw, train_test):
+def neuronal_classification(dataset, prediction, nb_tracks, nb_gtw, train_test):
 
 	#Remark: For a faster processing with GPU, this should be done with tf datasets
 	'''
@@ -248,9 +281,11 @@ def neuronal_classification(dataset, nb_tracks, nb_gtw, train_test):
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential([
-		tf.keras.layers.Dense(44, activation="relu", input_shape=(nb_gtw*2,)),
-		tf.keras.layers.Dense(20),
-		tf.keras.layers.Dense(nb_tracks, activation = "softmax") #output layer
+		tf.keras.layers.Dense(64, activation="relu", input_shape=(23, 3,)),
+		tf.keras.layers.Dropout(0.3),
+		tf.keras.layers.Dense(32, activation="relu"),
+		tf.keras.layers.Flatten(),
+		tf.keras.layers.Dense(nb_tracks, activation="softmax") #output layer
 		])
 	#print the summary of the model
 	#model.summary()
@@ -266,11 +301,20 @@ def neuronal_classification(dataset, nb_tracks, nb_gtw, train_test):
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
-		#parameters defining the speed of converging
-		epochs=1,
-		batch_size=32,
+		epochs=3,
+		batch_size=8,
 		validation_data=(testing_set[0],one_hot_labels_test),
 		callbacks=[tensorboard]
 		)
+
+	
+	prediction_set = (np.array(prediction[0]))
+	print("Test prediction for tracks: "+str(prediction[1]))
+	predicted_classes = model.predict_classes(prediction_set)
+	prediction_accuracy = model.predict(prediction_set)
+
+	print("Classes predicted by model: "+str(predicted_classes))
+	print(prediction_accuracy)
+	
 
 	return np.mean(results.history["acc"]), np.mean(results.history["val_acc"])
