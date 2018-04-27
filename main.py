@@ -1,12 +1,14 @@
 import datetime
 import database as db
 import mapping
+import json
 import plot
 import random
 import numpy as np
 import geometry as geo
 import fingerprinting as fp
 import sys
+import time
 
 import csv
 
@@ -133,26 +135,33 @@ for track1 in range(3,12):
 #test accuracy of jaccard classifier
 d_size = 1000
 nb_iter = 3
-nb_measures = 20
-nb_tests = 20
+nb_measures = 5
+nb_tests = 100
 
+timer = 0
 correct_classifications = 0
 wrongly_classified_tracks = []
+fp.create_comparison_set(d_size,nb_measures)
+
 for t in range(nb_tests):
+	start = time.time()
 	print(".",end="")
 	sys.stdout.flush() #display point immediately
 	#generate test track
 	trk_nb = random.randint(3,11)
 	#print("Test #"+str(t+1)+", Track: "+str(trk_nb))
 	classification = fp.jaccard_classifier(fp.create_dataset(db.request_track(trk_nb),dataset_size=d_size,nb_measures=nb_measures),d_size=d_size,nb_measures=nb_measures,nb_iter=nb_iter)
+	end = time.time()
+	timer += (end-start)
 	if classification[0] == trk_nb:
 		correct_classifications += 1
 	else:
 		wrongly_classified_tracks.append((trk_nb,)+classification)
-
+timer = timer / nb_tests
 accuracy = 100.0*correct_classifications/nb_tests
 print("\n************************************")
 print("***ACCURACY OF JACCARD CLASSIFIER***")
+print("Mean step execution time: "+str(timer))
 print("Dataset size: "+str(d_size))
 print("Measures per dataset: "+str(nb_measures))
 print("Jaccard classifier iterations: "+str(nb_iter))
@@ -179,15 +188,13 @@ reference_gateways = gateway_list()
 trk_array = []
 nb_tracks = 9
 for i in range (3,3+nb_tracks):
-	trk_array.append(db.request_track(i))
+	track = db.request_track(i)
+	#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
+	trk_array.append(track)
 
-dataset = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=20000,nb_measures=20)
+training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=2000,nb_measures=10,train_test=0.8)
 
-#prediction test
-prediction = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=1,nb_measures=20)
-
-acc, val_acc = fp.neuronal_classification(dataset,prediction,nb_tracks,len(reference_gateways),0.5)
-print(str(acc)+", "+str(val_acc))
+fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways))
 
 
 '''

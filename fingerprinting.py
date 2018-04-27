@@ -11,6 +11,11 @@ from time import time
 import sys
 from operator import itemgetter, attrgetter
 
+comparison_datasets=[]
+
+def create_comparison_set(d_size,nb_measures):
+	for trk_comp in range(3,12):
+		comparison_datasets.append(create_dataset(db.request_track(trk_comp),dataset_size=d_size,nb_measures=nb_measures))
 
 #tf.enable_eager_execution()
 
@@ -27,37 +32,70 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	#Set default values
 	dataset_size = 20 # per track!
 	nb_measures = 10
+	train_test = 0.8
 
 	if 'dataset_size' in kwargs:
 		dataset_size = kwargs['dataset_size']
 	if 'nb_measures' in kwargs:
 		nb_measures = kwargs['nb_measures']
+	if 'train_test' in kwargs:
+		train_test = kwargs['train_test']
 
-	compilation = []
+	if train_test > 1 or train_test < 0:
+		return "ERROR: Impossible train-test ratio"
+
+	compilation_train = []
+	compilation_test = []
 
 	for trk_json in track_array_json:
-		trk_dict = create_dataset(trk_json,dataset_size=dataset_size,nb_measures=nb_measures)
+		#for every track we need to have some points which are only training and some distinct other points for testing
+		track = json.loads(trk_json.decode('utf-8'))
+		track_train = track[:int(train_test*len(track))]
+		track_test = track[int(train_test*len(track)):]
+
+		trk_dict_train = create_dataset(track_train,dataset_size=dataset_size,nb_measures=nb_measures,pre_treated=True)
+		trk_dict_test = create_dataset(track_test,dataset_size=dataset_size,nb_measures=nb_measures,pre_treated=True)
+
 		#attribute the gateway features to the correct place in the gateway reference array
 		#for every point in the dataset
-		for p in trk_dict:
+		#training set
+
+		for p in trk_dict_train:
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
 					tensor.append(p['Gateways'][eui])
 				else:
 					tensor.append([0,0,0])
-			compilation.append({"Data":tensor,"Label":p['Track']})
+			compilation_train.append({"Data":tensor,"Label":p['Track']})
+
+		for p in trk_dict_test:
+			tensor = []
+			for eui in gateway_ref:
+				if eui in p['Gateways']:
+					tensor.append(p['Gateways'][eui])
+				else:
+					tensor.append([0,0,0])
+			compilation_test.append({"Data":tensor,"Label":p['Track']})
+
 	#create random order
-	random.shuffle(compilation)
+	random.shuffle(compilation_test)
+	random.shuffle(compilation_train)
 
 	#create output arrays wich have the same order
-	data = []
-	labels = []
-	for point in compilation:
-		data.append(point['Data'])
-		labels.append(point['Label'])
+	data_train = []
+	labels_train = []
+	data_test = []
+	labels_test = []
 
-	return data, labels
+	for point in compilation_train:
+		data_train.append(point['Data'])
+		labels_train.append(point['Label'])
+	for point in compilation_test:
+		data_test.append(point['Data'])
+		labels_test.append(point['Label'])
+
+	return ((data_train, labels_train),(data_test,labels_test))
 
 
 def jaccard_classifier(input_track, **kwargs):
@@ -83,7 +121,7 @@ def jaccard_classifier(input_track, **kwargs):
 
 	for i in range(nb_iter):
 		for trk_comp in range(3,12):
-			comparison_dataset = create_dataset(db.request_track(trk_comp),dataset_size=d_size,nb_measures=nb_measures)
+			comparison_dataset = comparison_datasets[trk_comp-3]
 			c = 0
 			for p1 in input_track:
 				for p2 in comparison_dataset:
@@ -144,7 +182,10 @@ def create_dataset(track_json, **kwargs):
 	@kwargs nb_measures: over how many random points a dataset item is generated
 	@result: dataset
 	'''
-	track = json.loads(track_json.decode('utf-8'))
+	if 'pre_treated' not in kwargs:
+		track = json.loads(track_json.decode('utf-8'))
+	else:
+		track = track_json
 	#Set default values
 	dataset_size = 100
 	nb_measures = 10
@@ -156,6 +197,7 @@ def create_dataset(track_json, **kwargs):
 
 	if nb_measures > len(track):
 		nb_measures = len(track)
+		print("WARNING: nb_measures reduced to "+str(nb_measures))
 
 	dataset = []
 
@@ -255,7 +297,7 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(dataset, prediction, nb_tracks, nb_gtw, train_test):
+def neuronal_classification(training, testing, nb_tracks, nb_gtw):
 
 	#Remark: For a faster processing with GPU, this should be done with tf datasets
 	'''
@@ -266,14 +308,9 @@ def neuronal_classification(dataset, prediction, nb_tracks, nb_gtw, train_test):
 	training_set = training_set.shuffle(buffer_size=1000)
 	testing_set = testing_set.shuffle(buffer_size=1000)
 	'''
-	if train_test > 1 or train_test < 0:
-		return "ERROR: Impossible train-test ratio"
 
-	train_len = int(train_test*len(dataset[0]))
-
-	#array: 0-data, 1-labels
-	training_set = (np.array(dataset[0][:train_len]),np.array(dataset[1][:train_len]))
-	testing_set = (np.array(dataset[0][train_len:]),np.array(dataset[1][train_len:]))
+	training_set = (np.array(training[0]),np.array(training[1]))
+	testing_set = (np.array(testing[0]),np.array(testing[1]))
 
 	# Convert labels to categorical one-hot encoding
 	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_tracks)
@@ -281,9 +318,8 @@ def neuronal_classification(dataset, prediction, nb_tracks, nb_gtw, train_test):
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential([
-		tf.keras.layers.Dense(64, activation="relu", input_shape=(23, 3,)),
+		tf.keras.layers.Dense(16, activation="relu", input_shape=(nb_gtw, 3,)),
 		tf.keras.layers.Dropout(0.3),
-		tf.keras.layers.Dense(32, activation="relu"),
 		tf.keras.layers.Flatten(),
 		tf.keras.layers.Dense(nb_tracks, activation="softmax") #output layer
 		])
@@ -301,20 +337,10 @@ def neuronal_classification(dataset, prediction, nb_tracks, nb_gtw, train_test):
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
-		epochs=3,
+		epochs=8,
 		batch_size=8,
 		validation_data=(testing_set[0],one_hot_labels_test),
 		callbacks=[tensorboard]
-		)
+		)	
 
-	
-	prediction_set = (np.array(prediction[0]))
-	print("Test prediction for tracks: "+str(prediction[1]))
-	predicted_classes = model.predict_classes(prediction_set)
-	prediction_accuracy = model.predict(prediction_set)
-
-	print("Classes predicted by model: "+str(predicted_classes))
-	print(prediction_accuracy)
-	
-
-	return np.mean(results.history["acc"]), np.mean(results.history["val_acc"])
+	return model
