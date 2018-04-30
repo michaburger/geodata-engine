@@ -297,7 +297,7 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(training, testing, nb_tracks, nb_gtw):
+def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1):
 
 	#Remark: For a faster processing with GPU, this should be done with tf datasets
 	'''
@@ -318,8 +318,8 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw):
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential([
-		tf.keras.layers.Dense(16, activation="relu", input_shape=(nb_gtw, 3,)),
-		tf.keras.layers.Dropout(0.3),
+		tf.keras.layers.Dense(neurons1, activation="relu", input_shape=(nb_gtw, 3,)),
+		tf.keras.layers.Dropout(dropout1),
 		tf.keras.layers.Flatten(),
 		tf.keras.layers.Dense(nb_tracks, activation="softmax") #output layer
 		])
@@ -337,8 +337,8 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw):
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
-		epochs=8,
-		batch_size=8,
+		epochs=epochs,
+		batch_size=batch,
 		validation_data=(testing_set[0],one_hot_labels_test),
 		callbacks=[tensorboard]
 		)	

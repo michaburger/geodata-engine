@@ -12,6 +12,24 @@ import time
 
 import csv
 
+#input arguments
+if len(sys.argv) == 7:
+	NB_DATA = int(sys.argv[1])
+	NB_MEAS = int(sys.argv[2])
+	BATCH = int(sys.argv[3])
+	EPOCHS = int(sys.argv[4])
+	NEURONS1 = int(sys.argv[5])
+	DROPOUT1 = int(sys.argv[6])
+
+else:
+	print('WARNING: No input arguments. Default values taken')
+	NB_DATA = 10000
+	NB_MEAS = 20
+	BATCH = 16
+	EPOCHS = 64
+	NEURONS1 = 8
+	DROPOUT1 = 0.3
+
 '''
 #import multiple gateways from file
 LAT = 2
@@ -192,10 +210,12 @@ for i in range (3,3+nb_tracks):
 	#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
 	trk_array.append(track)
 
-training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=2000,nb_measures=10,train_test=0.8)
+training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=NB_DATA,nb_measures=NB_MEAS,train_test=0.8)
 
-fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways))
-
+start = time.time()
+fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,NEURONS1,DROPOUT1)
+end = time.time()
+print("Execution time: "+str(end-start)+"s")
 
 '''
 #output results in table format
