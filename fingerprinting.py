@@ -333,14 +333,15 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		metrics = ["accuracy"]
 	)
 
-	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="data/logs/{}".format(time()))
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(time()))
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
 		epochs=epochs,
 		batch_size=batch,
 		validation_data=(testing_set[0],one_hot_labels_test),
-		callbacks=[tensorboard]
+		callbacks=[tensorboard],
+		verbose=2
 		)	
-
-	return model
+	#return mean over the last 4 epochs
+	return np.mean(results.history["acc"][epochs-4:]), np.mean(results.history["val_acc"][epochs-4:])

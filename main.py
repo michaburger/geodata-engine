@@ -27,10 +27,10 @@ else:
 	NB_DATA = 10000
 	NB_MEAS = 20
 	BATCH = 16
-	EPOCHS = 64
+	EPOCHS = 6
 	TRAIN_TEST = 0.6
-	NEURONS1 = 8
-	DROPOUT1 = 0.3
+	NEURONS1 = 16
+	DROPOUT1 = 0.0
 
 '''
 #import multiple gateways from file
@@ -195,6 +195,7 @@ print("************************************")
 #24.4.2018 Tensorflow
 
 #create gateway array including office gateways
+
 def gateway_list():
 	trk_array = []
 	for i in range (3,12):
@@ -205,19 +206,43 @@ def gateway_list():
 
 
 reference_gateways = gateway_list()
-trk_array = []
-nb_tracks = 9
-for i in range (3,3+nb_tracks):
-	track = db.request_track(i)
-	#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
-	trk_array.append(track)
 
-training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=NB_DATA,nb_measures=NB_MEAS,train_test=TRAIN_TEST)
+#multiple parameter evaluation during the night
+param_neurons = [8, 16, 32, 64, 128]
+param_dropout = [0.0, 0.2, 0.4, 0.6, 0.8]
+param_nb_meas = [20,15,10,5]
+param_nb_data = [10000,20000]
 
-start = time.time()
-fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,NEURONS1,DROPOUT1)
-end = time.time()
-print("Execution time: "+str(end-start)+"s")
+#write headers
+f = open('/data/logfile.log','w')
+f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
+f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
+f.close()
+
+for n_dataset in param_nb_data:
+	for n_meas in param_nb_meas:
+		for dropout in param_dropout:
+			for neurons in param_neurons:
+				trk_array = []
+				nb_tracks = 9
+				for i in range (3,3+nb_tracks):
+					track = db.request_track(i)
+					#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
+					trk_array.append(track)
+
+				training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=n_dataset,nb_measures=n_meas,train_test=TRAIN_TEST)
+
+				start = time.time()
+				acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,neurons,dropout)
+				end = time.time()
+
+				f = open('/data/logfile.log','a')
+				f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(acc)+"\t"+str(val_acc)+"\t"+str((acc-val_acc)/acc)+"\t"+str(end-start)+"\n")
+				f.close()
+
+				print("Acc: "+str(acc))
+				print("Val_acc: "+str(val_acc))
+				print("Execution time: "+str(end-start)+"s")
 
 '''
 #output results in table format
