@@ -26,8 +26,8 @@ else:
 	print('WARNING: Wrong input arguments. Default values taken')
 	NB_DATA = 10000
 	NB_MEAS = 20
-	BATCH = 256
-	EPOCHS = 128
+	BATCH = 16
+	EPOCHS = 64
 	TRAIN_TEST = 0.6
 	NEURONS1 = 32
 	DROPOUT1 = 0.3
