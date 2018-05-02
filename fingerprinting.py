@@ -64,7 +64,8 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
-					tensor.append(p['Gateways'][eui])
+					arr = [-1*p['Gateways'][eui][0],40*p['Gateways'][eui][1],200*p['Gateways'][eui][2]]
+					tensor.append(arr)
 				else:
 					tensor.append([0,0,0])
 			compilation_train.append({"Data":tensor,"Label":p['Track']})
@@ -73,7 +74,8 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
-					tensor.append(p['Gateways'][eui])
+					arr = [-1*p['Gateways'][eui][0],40*p['Gateways'][eui][1],200*p['Gateways'][eui][2]]
+					tensor.append(arr)
 				else:
 					tensor.append([0,0,0])
 			compilation_test.append({"Data":tensor,"Label":p['Track']})
@@ -333,7 +335,7 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		metrics = ["accuracy"]
 	)
 
-	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(time()))
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/neurons{}-dropout{}-batch{}".format(neurons1,dropout1,batch))
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,

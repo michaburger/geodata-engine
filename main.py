@@ -23,14 +23,28 @@ if len(sys.argv) == 8:
 	DROPOUT1 = int(sys.argv[7])
 
 else:
-	print('WARNING: No input arguments. Default values taken')
+	print('WARNING: Wrong input arguments. Default values taken')
 	NB_DATA = 10000
 	NB_MEAS = 20
-	BATCH = 16
-	EPOCHS = 8
+	BATCH = 256
+	EPOCHS = 128
 	TRAIN_TEST = 0.6
-	NEURONS1 = 16
-	DROPOUT1 = 0.0
+	NEURONS1 = 32
+	DROPOUT1 = 0.3
+
+#create gateway array including office gateways
+def gateway_list():
+	trk_array = []
+	for i in range (3,12):
+		trk_array.append(db.request_track(i))
+	trk_array.append(db.request_track(20))
+	gtws = fp.get_gateways(trk_array)
+	return gtws
+
+def gateway_list_track(track):
+	trk_array = []
+	trk_array.append(db.request_track(track))
+	return fp.get_gateways(trk_array)
 
 '''
 #import multiple gateways from file
@@ -45,12 +59,13 @@ with open('antenna.csv') as csvfile:
 			print(db.add_gateway(row[EUI],row[LAT],row[LON]))
 '''
 
-
+'''
 #get gateways from database and plot them on the map
 mapping.add_gateway_layer(db.request_gateways(25))
 
 #Add Track 1 as a point layer
-gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
+#gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
+gtws = gateway_list_track(20)
 
 for cnt, g in enumerate(gtws):
 	mapping.add_point_layer(db.request_track(20),gtws[cnt],gtws[cnt],3,500)
@@ -63,7 +78,7 @@ for cnt, g in enumerate(gtws):
 
 #output map
 mapping.output_map('maps/clustering-map.html')
-
+'''
 
 #geo.dist_to_gtw()
 #geo.trilat_opt()
@@ -193,31 +208,22 @@ print("************************************")
 
 
 #24.4.2018 Tensorflow
-'''
-#create gateway array including office gateways
-
-def gateway_list():
-	trk_array = []
-	for i in range (3,12):
-		trk_array.append(db.request_track(i))
-	trk_array.append(db.request_track(20))
-	gtws = fp.get_gateways(trk_array)
-	return gtws
 
 
 reference_gateways = gateway_list()
 
 #multiple parameter evaluation during the night
-param_neurons = [8, 16, 32, 64, 128]
-param_dropout = [0.0, 0.2, 0.4, 0.6, 0.8]
+param_neurons = [8,16,32,64,128]
+param_dropout = [0.0,0.2,0.4,0.6,0.8]
 param_nb_meas = [20,15,10,5]
-param_nb_data = [10000,20000]
+param_nb_data = [10000]
 
 #write headers
-f = open('data/logfile.log','w')
+f = open('data/norm-impact.log','w')
 f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
 f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 f.close()
+
 
 for n_dataset in param_nb_data:
 	for n_meas in param_nb_meas:
@@ -231,19 +237,24 @@ for n_dataset in param_nb_data:
 					trk_array.append(track)
 
 				training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=n_dataset,nb_measures=n_meas,train_test=TRAIN_TEST)
-
 				start = time.time()
 				acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,neurons,dropout)
 				end = time.time()
 
-				f = open('data/logfile.log','a')
+				f = open('data/norm-impact.log','a')
 				f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(acc)+"\t"+str(val_acc)+"\t"+str((acc-val_acc)/acc)+"\t"+str(end-start)+"\n")
 				f.close()
 
+				print("***PARAMETERS***")
+				print("Dataset size: "+str(n_dataset))
+				print("Measures per dataset: "+str(n_meas))
+				print("Dropout: "+str(dropout))
+				print("Neurons: "+str(neurons))
+				print("***RESULTS***")
 				print("Acc: "+str(acc))
 				print("Val_acc: "+str(val_acc))
 				print("Execution time: "+str(end-start)+"s")
-'''
+
 '''
 #output results in table format
 print("Measures\tTest accuracy\tValidation accuracy")
