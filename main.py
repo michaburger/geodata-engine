@@ -27,7 +27,7 @@ else:
 	NB_DATA = 10000
 	NB_MEAS = 20
 	BATCH = 16
-	EPOCHS = 64
+	EPOCHS = 8
 	TRAIN_TEST = 0.6
 	NEURONS1 = 16
 	DROPOUT1 = 0.0
@@ -62,7 +62,7 @@ for cnt, g in enumerate(gtws):
 #mapping.add_heatmap(db.request_track(1))
 
 #output map
-mapping.output_map('Map1-ESP-SF12.html)
+mapping.output_map('Map-test.html')
 '''
 
 #geo.dist_to_gtw()
@@ -214,7 +214,7 @@ param_nb_meas = [20,15,10,5]
 param_nb_data = [10000,20000]
 
 #write headers
-f = open('/data/logfile.log','w')
+f = open('data/logfile.log','w')
 f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
 f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 f.close()
@@ -236,7 +236,7 @@ for n_dataset in param_nb_data:
 				acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,neurons,dropout)
 				end = time.time()
 
-				f = open('/data/logfile.log','a')
+				f = open('data/logfile.log','a')
 				f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(acc)+"\t"+str(val_acc)+"\t"+str((acc-val_acc)/acc)+"\t"+str(end-start)+"\n")
 				f.close()
 
