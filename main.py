@@ -12,26 +12,6 @@ import time
 
 import csv
 
-#input arguments
-if len(sys.argv) == 8:
-	NB_DATA = int(sys.argv[1])
-	NB_MEAS = int(sys.argv[2])
-	BATCH = int(sys.argv[3])
-	EPOCHS = int(sys.argv[4])
-	TRAIN_TEST = int(sys.argv[5])
-	NEURONS1 = int(sys.argv[6])
-	DROPOUT1 = int(sys.argv[7])
-
-else:
-	print('WARNING: Wrong input arguments. Default values taken')
-	NB_DATA = 10000
-	NB_MEAS = 20
-	BATCH = 16
-	EPOCHS = 64
-	TRAIN_TEST = 0.6
-	NEURONS1 = 32
-	DROPOUT1 = 0.3
-
 #create gateway array including office gateways
 def gateway_list():
 	trk_array = []
@@ -209,17 +189,37 @@ print("************************************")
 
 #24.4.2018 Tensorflow
 
-
 reference_gateways = gateway_list()
 
+#input arguments
+if len(sys.argv) == 8:
+	NB_DATA = int(sys.argv[1])
+	NB_MEAS = int(sys.argv[2])
+	BATCH = int(sys.argv[3])
+	EPOCHS = int(sys.argv[4])
+	TRAIN_TEST = int(sys.argv[5])
+	NEURONS1 = int(sys.argv[6])
+	DROPOUT1 = int(sys.argv[7])
+
+else:
+	print('WARNING: Wrong input arguments. Default values taken')
+	NB_DATA = 10000
+	NB_MEAS = 20
+	BATCH = 200
+	EPOCHS = 10
+	TRAIN_TEST = 0.6
+	NEURONS1 = 32
+	DROPOUT1 = 0.3
+
 #multiple parameter evaluation during the night
-param_neurons = [8,16,32,64,128]
-param_dropout = [0.0,0.2,0.4,0.6,0.8]
-param_nb_meas = [20,15,10,5]
+param_batch = [20,50,100,200,450,900]
+param_neurons = [32]
+param_dropout = [0.3]
+param_nb_meas = [20]
 param_nb_data = [10000]
 
 #write headers
-f = open('data/norm-impact.log','w')
+f = open('/data/ideal-batch.log','w')
 f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
 f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 f.close()
@@ -229,31 +229,40 @@ for n_dataset in param_nb_data:
 	for n_meas in param_nb_meas:
 		for dropout in param_dropout:
 			for neurons in param_neurons:
-				trk_array = []
-				nb_tracks = 9
-				for i in range (3,3+nb_tracks):
-					track = db.request_track(i)
-					#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
-					trk_array.append(track)
+				for batch in param_batch:
+					acc_arr = []
+					val_acc_arr = []
+					ex_arr = []
+					for m in range(5):
+						trk_array = []
+						nb_tracks = 9
+						for i in range (3,3+nb_tracks):
+							track = db.request_track(i)
+							#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
+							trk_array.append(track)
 
-				training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=n_dataset,nb_measures=n_meas,train_test=TRAIN_TEST)
-				start = time.time()
-				acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,neurons,dropout)
-				end = time.time()
+						training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=n_dataset,nb_measures=n_meas,train_test=TRAIN_TEST)
+						start = time.time()
+						acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),batch,EPOCHS,neurons,dropout,n_dataset,n_meas)
+						end = time.time()
+						acc_arr.append(acc)
+						val_acc_arr.append(val_acc)
+						ex_arr.append(end-start)
 
-				f = open('data/norm-impact.log','a')
-				f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(acc)+"\t"+str(val_acc)+"\t"+str((acc-val_acc)/acc)+"\t"+str(end-start)+"\n")
-				f.close()
+					f = open('/data/ideal-batch.log','a')
+					f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(np.mean(acc_arr))+"\t"+str(np.mean(val_acc_arr))+"\t"+str((np.mean(acc_arr)-np.mean(val_acc)/np.mean(acc)))+"\t"+str(np.mean(ex_arr))+"\n")
+					f.close()
 
-				print("***PARAMETERS***")
-				print("Dataset size: "+str(n_dataset))
-				print("Measures per dataset: "+str(n_meas))
-				print("Dropout: "+str(dropout))
-				print("Neurons: "+str(neurons))
-				print("***RESULTS***")
-				print("Acc: "+str(acc))
-				print("Val_acc: "+str(val_acc))
-				print("Execution time: "+str(end-start)+"s")
+					print("***PARAMETERS***")
+					print("Batch size: "+str(batch))
+					print("Dataset size: "+str(n_dataset))
+					print("Measures per dataset: "+str(n_meas))
+					print("Dropout: "+str(dropout))
+					print("Neurons: "+str(neurons))
+					print("***RESULTS***")
+					print("Acc: "+str(acc_arr))
+					print("Val_acc: "+str(val_acc_arr))
+					print("Execution time (s): "+str(ex_arr))
 
 '''
 #output results in table format

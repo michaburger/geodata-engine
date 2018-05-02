@@ -32,7 +32,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	#Set default values
 	dataset_size = 20 # per track!
 	nb_measures = 10
-	train_test = 0.8
+	train_test = 0.5
 
 	if 'dataset_size' in kwargs:
 		dataset_size = kwargs['dataset_size']
@@ -299,9 +299,13 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1):
+def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1, n_dataset, n_meas):
 
-	#Remark: For a faster processing with GPU, this should be done with tf datasets
+	#Enable GPU
+	config = tf.ConfigProto()
+	config.gpu_options.allow_growth = True
+	session = tf.Session(config=config)
+
 	'''
 	training_set = tf.data.Dataset.from_tensor_slices(training)
 	testing_set = tf.data.Dataset.from_tensor_slices(testing)
@@ -318,9 +322,11 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_tracks)
 	one_hot_labels_test = tf.keras.utils.to_categorical(testing_set[1], num_classes=nb_tracks)
 
+	activation = "relu"
+
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential([
-		tf.keras.layers.Dense(neurons1, activation="relu", input_shape=(nb_gtw, 3,)),
+		tf.keras.layers.Dense(neurons1, activation=activation, input_shape=(nb_gtw, 3,)),
 		tf.keras.layers.Dropout(dropout1),
 		tf.keras.layers.Flatten(),
 		tf.keras.layers.Dense(nb_tracks, activation="softmax") #output layer
@@ -335,7 +341,7 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		metrics = ["accuracy"]
 	)
 
-	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/neurons{}-dropout{}-batch{}".format(neurons1,dropout1,batch))
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/nr{}-drp{}-bat{}-dat{}k-pts{}-{}".format(neurons1,dropout1,batch,int(n_dataset/1000),n_meas,time()))
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
@@ -346,4 +352,4 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		verbose=2
 		)	
 	#return mean over the last 4 epochs
-	return np.mean(results.history["acc"][epochs-4:]), np.mean(results.history["val_acc"][epochs-4:])
+	return np.mean(results.history["acc"][epochs-10:]), np.mean(results.history["val_acc"][epochs-10:])
