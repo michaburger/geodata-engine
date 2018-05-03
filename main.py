@@ -223,6 +223,8 @@ try:
 	f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
 	f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 	f.close()
+except:
+	print("WARNING: File write error. Logging disabled! ")
 
 
 for n_dataset in param_nb_data:
@@ -247,14 +249,16 @@ for n_dataset in param_nb_data:
 					acc_arr.append(acc)
 					val_acc_arr.append(val_acc)
 					ex_arr.append(end-start)
-					
+
 				try:
 					f = open('/data/relu.log','a')
 					f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(np.mean(acc_arr))+"\t"+str(np.mean(val_acc_arr))+"\t"+str((np.mean(acc_arr)-np.mean(val_acc)/np.mean(acc)))+"\t"+str(np.mean(ex_arr))+"\n")
 					f.close()
+				except:
+					print("WARNING: File write error. Logging disabled! ")
 
 				print("***PARAMETERS***")
-				print("Batch size: "+str(batch))
+				print("Batch size: "+str(BATCH))
 				print("Dataset size: "+str(n_dataset))
 				print("Measures per dataset: "+str(n_meas))
 				print("Dropout: "+str(dropout))
