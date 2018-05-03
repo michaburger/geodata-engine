@@ -219,7 +219,7 @@ param_nb_data = [10000]
 
 #write headers
 try:
-	f = open('/data/relu.log','w')
+	f = open('/data/tanh.log','w')
 	f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
 	f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 	f.close()
@@ -251,7 +251,7 @@ for n_dataset in param_nb_data:
 					ex_arr.append(end-start)
 
 				try:
-					f = open('/data/relu.log','a')
+					f = open('/data/tanh.log','a')
 					f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(np.mean(acc_arr))+"\t"+str(np.mean(val_acc_arr))+"\t"+str((np.mean(acc_arr)-np.mean(val_acc)/np.mean(acc)))+"\t"+str(np.mean(ex_arr))+"\n")
 					f.close()
 				except:

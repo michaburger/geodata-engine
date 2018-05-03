@@ -322,7 +322,7 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_tracks)
 	one_hot_labels_test = tf.keras.utils.to_categorical(testing_set[1], num_classes=nb_tracks)
 
-	activation = "relu"
+	activation = "tanh"
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential([
