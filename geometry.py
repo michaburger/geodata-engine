@@ -21,9 +21,7 @@ def deltax(esp,variance):
 	minimum = distance(esp+variance)
 	return (maximum - minimum) / 2
 
-def trilat_extract_info(point_list, gateway_list, ref_point):
-	p_dict = json.loads(point_list.decode('utf-8'))
-	g_dict = json.loads(gateway_list.decode('utf-8'))
+def trilat_extract_info(p_dict, g_dict, ref_point):
 
 	distance, rssi, esp = ([] for i in range(3))
 
@@ -425,9 +423,7 @@ def coord_to_m(latlon, degrees, deglat):
 	else:
 		return 0
 
-def distance_list(point_list, gateway_list, ref_point):
-	p_dict = json.loads(point_list.decode('utf-8'))
-	g_dict = json.loads(gateway_list.decode('utf-8'))
+def distance_list(p_dict, g_dict, ref_point):
 
 	#print(p_dict)
 	#print(g_dict)

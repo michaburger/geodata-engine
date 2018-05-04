@@ -33,6 +33,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	dataset_size = 20 # per track!
 	nb_measures = 10
 	train_test = 0.5
+	offset = 3
 
 	if 'dataset_size' in kwargs:
 		dataset_size = kwargs['dataset_size']
@@ -40,6 +41,8 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 		nb_measures = kwargs['nb_measures']
 	if 'train_test' in kwargs:
 		train_test = kwargs['train_test']
+	if 'offset' in kwargs:
+		offset = kwargs['offset']
 
 	if train_test > 1 or train_test < 0:
 		return "ERROR: Impossible train-test ratio"
@@ -47,14 +50,13 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	compilation_train = []
 	compilation_test = []
 
-	for trk_json in track_array_json:
+	for track in track_array_json:
 		#for every track we need to have some points which are only training and some distinct other points for testing
-		track = json.loads(trk_json.decode('utf-8'))
 		track_train = track[:int(train_test*len(track))]
 		track_test = track[int(train_test*len(track)):]
 
-		trk_dict_train = create_dataset(track_train,dataset_size=dataset_size,nb_measures=nb_measures,pre_treated=True)
-		trk_dict_test = create_dataset(track_test,dataset_size=dataset_size,nb_measures=nb_measures,pre_treated=True)
+		trk_dict_train = create_dataset(track_train,dataset_size=dataset_size,nb_measures=nb_measures,offset=offset)
+		trk_dict_test = create_dataset(track_test,dataset_size=dataset_size,nb_measures=nb_measures,offset=offset)
 
 		#attribute the gateway features to the correct place in the gateway reference array
 		#for every point in the dataset
@@ -89,6 +91,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	labels_train = []
 	data_test = []
 	labels_test = []
+
 
 	for point in compilation_train:
 		data_train.append(point['Data'])
@@ -176,7 +179,7 @@ def jaccard_classifier_best(input_track, **kwargs):
 	#if best value not reached...
 	return(similarity[0])
 
-def create_dataset(track_json, **kwargs):
+def create_dataset(track, **kwargs):
 	'''
 	@summary: Creates a random sample dataset from track data
 	@param track: the input track
@@ -184,10 +187,7 @@ def create_dataset(track_json, **kwargs):
 	@kwargs nb_measures: over how many random points a dataset item is generated
 	@result: dataset
 	'''
-	if 'pre_treated' not in kwargs:
-		track = json.loads(track_json.decode('utf-8'))
-	else:
-		track = track_json
+
 	#Set default values
 	dataset_size = 100
 	nb_measures = 10
@@ -234,9 +234,14 @@ def create_dataset(track_json, **kwargs):
 
 		for u,v in q.items():
 			gtw_info.update({u:[gtw_info[u][0],np.sqrt(q[u][0]/q[u][1]),t[u][1]/freq_count]})
+		
+		#if the tracks have an offset (start with track 3 for exemple, default)
+		offset = 3
+		if 'offset' in kwargs:
+			offset = kwargs['offset']
 
 		#create the dataset
-		dataset.append({'Track':track[k]['track_ID']-3,'Position':(track[k]['gps_lat'],track[k]['gps_lon']),'Gateways':gtw_info})
+		dataset.append({'Track':track[k]['track_ID']-offset,'Position':(track[k]['gps_lat'],track[k]['gps_lon']),'Gateways':gtw_info})
 
 	return dataset
 
@@ -291,15 +296,14 @@ def get_gateways(track_array):
 	'''
 	gtws = []
 
-	for trk_json in track_array:
-		trk = json.loads(trk_json.decode('utf-8'))
+	for trk in track_array:
 		for i in range(len(trk)):
 			for gtw in trk[i]['gateway_id']:
 				if gtw not in gtws:
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1, n_dataset, n_meas):
+def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1, n_dataset, n_meas, activation,layers):
 
 	#Enable GPU
 	config = tf.ConfigProto()
@@ -322,15 +326,16 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_tracks)
 	one_hot_labels_test = tf.keras.utils.to_categorical(testing_set[1], num_classes=nb_tracks)
 
-	activation = "sigmoid"
-
 	#Creating the NN model with Keras
-	model = tf.keras.Sequential([
-		tf.keras.layers.Dense(neurons1, activation=activation, input_shape=(nb_gtw, 3,)),
-		tf.keras.layers.Dropout(dropout1),
-		tf.keras.layers.Flatten(),
-		tf.keras.layers.Dense(nb_tracks, activation="softmax") #output layer
-		])
+	model = tf.keras.Sequential()
+	model.add(tf.keras.layers.Dense(neurons1, activation=activation, input_shape=(nb_gtw, 3,)))
+	for i in range(layers):
+		model.add(tf.keras.layers.Dropout(dropout1))
+		model.add(tf.keras.layers.Dense(neurons1, activation=activation))
+	model.add(tf.keras.layers.Flatten())
+	model.add(tf.keras.layers.Dense(nb_tracks, activation="softmax"))
+			
+	
 	#print the summary of the model
 	#model.summary()
 
@@ -341,7 +346,7 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		metrics = ["accuracy"]
 	)
 
-	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/nr{}-drp{}-bat{}-dat{}k-pts{}-{}".format(neurons1,dropout1,batch,int(n_dataset/1000),n_meas,time()))
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/nr{}-drp{}-bat{}-dat{}k-pts{}-lay{}-{}".format(neurons1,dropout1,batch,int(n_dataset/1000),n_meas,layers,time()))
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,

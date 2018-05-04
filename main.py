@@ -7,6 +7,7 @@ import random
 import numpy as np
 import geometry as geo
 import fingerprinting as fp
+import clustering as cl
 import sys
 import time
 
@@ -23,7 +24,7 @@ def gateway_list():
 
 def gateway_list_track(track):
 	trk_array = []
-	trk_array.append(db.request_track(track))
+	trk_array.append(track)
 	return fp.get_gateways(trk_array)
 
 '''
@@ -45,10 +46,10 @@ mapping.add_gateway_layer(db.request_gateways(25))
 
 #Add Track 1 as a point layer
 #gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
-gtws = gateway_list_track(20)
+gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00"))
 
 for cnt, g in enumerate(gtws):
-	mapping.add_point_layer(db.request_track(20),gtws[cnt],gtws[cnt],3,500)
+	mapping.add_point_layer(db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00","2018-04-27_12:00:00"),gtws[cnt],gtws[cnt],3,500)
 	#geo.distance_list(db.request_gateways(30),db.request_track(6, start="2018-03-20_00:00:00"),gtws[cnt],6)
 
 #mapping.add_point_layer(db.request_track(1),"3 satellites",3,500)
@@ -60,6 +61,7 @@ for cnt, g in enumerate(gtws):
 mapping.output_map('maps/clustering-map.html')
 '''
 
+#Trilateration - optimize parameters
 #geo.dist_to_gtw()
 #geo.trilat_opt()
 
@@ -185,11 +187,27 @@ print("ACCURACY: "+str(accuracy)+"%")
 print("Wrongly classified tracks: (correct track, classification, jaccard index) \n"+str(wrongly_classified_tracks))
 print("************************************")
 '''
+#4.5.2018 - Clustering
+clustering_test_track = db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00","2018-04-27_12:00:00")
 
+gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00","2018-04-27_12:00:00"))
+
+#have around 30 points per cluster
+nb_clusters = int(len(clustering_test_track)/50)
+print("Number of clusters: {}".format(nb_clusters))
+
+set_with_clusters = cl.distance_clustering(clustering_test_track,nb_clusters=nb_clusters)
+cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
+
+#draw map
+#for cnt, g in enumerate(gtws):
+	#mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,500,coloring='clusters')
+#mapping.output_map('maps/clustering-map.html')
 
 #24.4.2018 Tensorflow
 
-reference_gateways = gateway_list()
+#reference_gateways = gateway_list() #for reference-track-clustering
+reference_gateways = gtws #for track 20 clustering only
 
 #input arguments
 if len(sys.argv) == 8:
@@ -205,23 +223,26 @@ else:
 	print('WARNING: Wrong input arguments. Default values taken')
 	NB_DATA = 10000
 	NB_MEAS = 10
-	BATCH = 50
-	EPOCHS = 100
+	BATCH = 10
+	EPOCHS = 50
 	TRAIN_TEST = 0.5
 	NEURONS1 = 32
 	DROPOUT1 = 0.3
+	LAYERS = 2
 
 #multiple parameter evaluation during the night
-param_neurons = [32,64,128]
-param_dropout = [0.0,0.1,0.2,0.3,0.4]
-param_nb_meas = [10,5]
+param_layers = [1,2,3]
+act_functions = ["relu"]#,"tanh","sigmoid"]
+param_neurons = [16,32,64,128,256]
+param_dropout = [0.0,0.2,0.4]
+param_nb_meas = [20]
 param_nb_data = [10000]
 
 #write headers
 try:
-	f = open('/data/sigmoid.log','w')
-	f.write("Testing parameters for 1-layer NN. Accuracies: Mean over last 4 epochs. Total: 64 Epochs, Batch size 16.\n")
-	f.write("neurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
+	f = open('/data/multitest-weekend.log','w')
+	f.write('Epochs: {}, Train-test: {}, batch: {}, mean over 10 last epochs.'.format(EPOCHS,TRAIN_TEST,BATCH))
+	f.write("layers\tneurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 	f.close()
 except:
 	print("WARNING: File write error. Logging disabled! ")
@@ -231,46 +252,51 @@ for n_dataset in param_nb_data:
 	for n_meas in param_nb_meas:
 		for dropout in param_dropout:
 			for neurons in param_neurons:
-				acc_arr = []
-				val_acc_arr = []
-				ex_arr = []
-				for m in range(1):
-					trk_array = []
-					nb_tracks = 9
-					for i in range (3,3+nb_tracks):
-						track = db.request_track(i)
-						#print("Track "+str(i)+ " length: "+str(len(json.loads(track.decode('utf-8')))))
-						trk_array.append(track)
+				for activation in act_functions:
+					for layers in param_layers:
+						acc_arr = []
+						val_acc_arr = []
+						ex_arr = []
+						for m in range(1):
 
-					training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=n_dataset,nb_measures=n_meas,train_test=TRAIN_TEST)
-					start = time.time()
-					acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,neurons,dropout,n_dataset,n_meas)
-					end = time.time()
-					acc_arr.append(acc)
-					val_acc_arr.append(val_acc)
-					ex_arr.append(end-start)
+							#track array classification for reference tracks
+							#trk_array = []
+							#nb_tracks = 9
+							#for i in range (3,3+nb_tracks):
+							#	track = db.request_track(i)
+							#	trk_array.append(track)
 
-				try:
-					f = open('/data/sigmoid.log','a')
-					f.write(str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(np.mean(acc_arr))+"\t"+str(np.mean(val_acc_arr))+"\t"+str((np.mean(acc_arr)-np.mean(val_acc)/np.mean(acc)))+"\t"+str(np.mean(ex_arr))+"\n")
-					f.close()
-				except:
-					print("WARNING: File write error. Logging disabled! ")
+							#track 20 classification after clustering
+							trk_array = cluster_array
+							nb_tracks = nb_clusters
 
-				print("***PARAMETERS***")
-				print("Batch size: "+str(BATCH))
-				print("Dataset size: "+str(n_dataset))
-				print("Measures per dataset: "+str(n_meas))
-				print("Dropout: "+str(dropout))
-				print("Neurons: "+str(neurons))
-				print("***RESULTS***")
-				print("Acc: "+str(acc_arr))
-				print("Val_acc: "+str(val_acc_arr))
-				print("Execution time (s): "+str(ex_arr))
+							training_set, testing_set = fp.create_dataset_tf(trk_array,reference_gateways,dataset_size=n_dataset,nb_measures=n_meas,train_test=TRAIN_TEST,offset=0)
+							start = time.time()
+							acc, val_acc = fp.neuronal_classification(training_set,testing_set,nb_tracks,len(reference_gateways),BATCH,EPOCHS,neurons,dropout,n_dataset,n_meas,activation,layers)
+							end = time.time()
+							acc_arr.append(acc)
+							val_acc_arr.append(val_acc)
+							ex_arr.append(end-start)
 
-'''
-#output results in table format
-print("Measures\tTest accuracy\tValidation accuracy")
-for i in results:
-	print(str(i['Measures'])+"\t"+str(i['Test accuracy'])+"\t"+str(i['Validation accuracy']))
-'''
+						try:
+							f = open('/data/multitest-weekend.log','a')
+							f.write(str(layers)+"\t"+str(neurons)+"\t"+str(dropout)+"\t"+str(n_meas)+"\t"+str(n_dataset)+"\t"+str(np.mean(acc_arr))+"\t"+str(np.mean(val_acc_arr))+"\t"+str((np.mean(acc_arr)-np.mean(val_acc)/np.mean(acc)))+"\t"+str(np.mean(ex_arr))+"\n")
+							f.close()
+						except:
+							print("WARNING: File write error. Logging disabled! ")
+
+						print("***PARAMETERS***")
+						print("Activation function: "+activation)
+						print("Batch size: "+str(BATCH))
+						print("Dataset size: "+str(n_dataset))
+						print("Measures per dataset: "+str(n_meas))
+						print("Dropout: "+str(dropout))
+						print("Neurons: "+str(neurons))
+						print("***RESULTS***")
+						print("Acc: "+str(acc_arr))
+						print("Val_acc: "+str(val_acc_arr))
+						print("Execution time (s): "+str(ex_arr))
+
+
+
+

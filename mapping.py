@@ -4,9 +4,10 @@ from folium.plugins import HeatMap
 import numpy as np
 import pandas
 import geometry as geo
-
+import random
 
 coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),(46.516938, 6.563536),(46.522087, 6.563415),(46.521034, 6.571053),(46.518912, 6.566103),(46.518215, 6.563403),(46.521293, 6.568626)]
+color_list = []
 
 #init map
 map = folium.Map(location=[46.52, 6.565],zoom_start=16,tiles='stamentoner')
@@ -74,8 +75,7 @@ def add_marker(coordinates,layer_name):
 	mrk.add_child(folium.Marker(location=[coordinates[0],coordinates[1]],icon=folium.Icon(color='red',prefix='fa',icon='bolt'),popup= layer_name))
 	map.add_child(mrk)
 
-def add_gateway_layer(gatewayList, layerName='Gateways'):
-	gtw = json.loads(gatewayList.decode('utf-8'))
+def add_gateway_layer(gtw, layerName='Gateways'):
 	fgtw = folium.FeatureGroup(name=layerName)
 
 	gtw_id=[]
@@ -100,7 +100,7 @@ def hexcol(col):
 	else:
 		return hexstr
 
-def pick_color(heat):
+def pick_color_heat(heat,cluster,color_clusters):
 	low_range = 70 #ESP for green
 	mid_range = 90 #ESP for orange
 	high_range = 105 #ESP for red
@@ -135,6 +135,24 @@ def pick_color(heat):
 	else:
 		return '#0000'+hexcol(blue_max)
 
+def pick_color_clusters(cluster):
+	#fill color list array
+	if len(color_list)==0:
+		for i in range(100):
+			color_list.append('#'+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))+hexcol(random.randint(0,255)))
+	if cluster >= 100:
+		return "#ffffff"
+	else:
+		return color_list[cluster-1]
+
+
+
+def pick_color(heat,cluster,color_clusters):
+	if color_clusters:
+		return pick_color_clusters(cluster)
+	else:
+		return pick_color_heat(heat)
+
 
 def pick_opacity(heat):
 	if heat == 0:
@@ -142,36 +160,41 @@ def pick_opacity(heat):
 	else:
 		return 0.7
 
-def add_point_layer(pointList, layerName='PointLayer', gateway= '0B030153', minSatellites = 1, minHDOP = 500):
-	pts = json.loads(pointList.decode('utf-8'))
+def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatellites = 1, minHDOP = 500, **kwargs):
+
+	color_clusters = False
+	if 'coloring' in kwargs and kwargs['coloring']=='clusters':
+		color_clusters = True
+
 	ftr1 = folium.FeatureGroup(name=layerName)
-	lat, lon, time, timest, dev, hum, temp, sp, gps_sat, gps_hdop, gateways, rssi, snr, esp, heat = ([] for i in range(15))
-
+	lat, lon, time, timest, dev, hum, temp, sp, gps_sat, gps_hdop, gateways, rssi, snr, esp, heat, cluster = ([] for i in range(16))
 	for count, trk in enumerate(pts):
-		#only consider points with at least 5 satellites and antenna 1
-		if(trk['gps_sat']>=minSatellites and trk['gps_hdop']<minHDOP) and trk['gateway_id'][0] == gateway:
-			lat.append(trk['gps_lat'])
-			lon.append(trk['gps_lon'])
-			timest.append(trk['timestamp']['$date']) #todo: format time
-			if 'time' in trk: #old points of track 1 don't have time string yet
+		for i, gtw in enumerate(trk['gateway_id']):
+			#only consider points with at least 5 satellites and antenna 1
+			if(trk['gps_sat']>=minSatellites and trk['gps_hdop']<minHDOP) and gtw == gateway:
+				lat.append(trk['gps_lat'])
+				lon.append(trk['gps_lon'])
+				timest.append(trk['timestamp']['$date']) #todo: format time
 				time.append(trk['time'])
-			dev.append(trk['deviceType'])
-			hum.append(trk['humidity'])
-			temp.append(trk['temperature'])
-			sp.append(trk['sp_fact'])
-			gps_sat.append(trk['gps_sat'])
-			gps_hdop.append(trk['gps_hdop'])
-			gateways.append(trk['gateway_id'])
-			rssi.append(trk['gateway_rssi'])
-			snr.append(trk['gateway_snr'])
-			esp.append(trk['gateway_esp'])
-			#first gateway heatmap production. Store ESP value if the EPFL gateway has received the signal.
-			if(trk['gateway_id'][0] == gateway):
-				heat.append((int)(-1*trk['gateway_rssi'][0]))
-			else:
-				heat.append(0)
+				dev.append(trk['deviceType'])
+				hum.append(trk['humidity'])
+				temp.append(trk['temperature'])
+				sp.append(trk['sp_fact'])
+				gps_sat.append(trk['gps_sat'])
+				gps_hdop.append(trk['gps_hdop'])
+				gateways.append(trk['gateway_id'])
+				rssi.append(trk['gateway_rssi'])
+				snr.append(trk['gateway_snr'])
+				esp.append(trk['gateway_esp'])
+				if 'cluster' in trk:
+					cluster.append(str(trk['track_ID']))
+				else:
+					cluster.append("Not set")
+				
+				#used for the color
+				heat.append((int)(-1*trk['gateway_rssi'][i]))
 
-	for lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat in zip(lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat):
+	for lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat,cluster in zip(lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat,cluster):
 		#print("heat: "+str(heat)+", color: "+pick_color(heat))
 		ftr1.add_child(folium.CircleMarker(location=[lat,lon],
 			fill=True,radius=10,
@@ -186,17 +209,17 @@ def add_point_layer(pointList, layerName='PointLayer', gateway= '0B030153', minS
 			+ "<b>Gateways: </b>" + ", ".join(gateways) + "<br/>"
 			+ "<b>RSSI: </b>" + str(rssi) + "<br/>"
 			+ "<b>SNR: </b>" + str(snr) + "<br/>"
-			+ "<b>ESP: </b>" + str(esp) + "<br/>",
+			+ "<b>ESP: </b>" + str(esp) + "<br/>"
+			+ "<b>Cluster: </b>" + str(cluster) + "<br/>",
 			color='',
-			fill_color=pick_color(heat),
+			fill_color=pick_color(heat,int(cluster),color_clusters),
 			fill_opacity=pick_opacity(heat)))
 
 	map.add_child(ftr1)
 	print("Map: "+layerName+" rendered!")
 
 #try to norm heat value to have better results
-def add_heatmap(pointList, layerName='Heatmap', gateway= '0B030153', minSatellites = 1, minHDOP = 500):
-	pts = json.loads(pointList.decode('utf-8'))
+def add_heatmap(pts, layerName='Heatmap', gateway= '0B030153', minSatellites = 1, minHDOP = 500):
 
 	fhmap = folium.FeatureGroup(name=layerName)
 	lat, lon, esp, heat = ([] for i in range(4))

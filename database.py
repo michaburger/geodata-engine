@@ -16,7 +16,7 @@ def request_track(track,txpow=0,sf=7,dev='78AF580300000485',start="2018-01-01_00
 		try:
 			req = urllib.request.Request(url)
 			r = urllib.request.urlopen(req).read()
-			return r
+			return json.loads(r.decode('utf-8'))
 		except HTTPError as e:
 			print("HTTPError in trial {}".format(i))
 			time.sleep(60)
@@ -31,7 +31,7 @@ def request_track_no_params(track,start="2018-01-01_00:00:00",end=str(dt.datetim
 		try:
 			req = urllib.request.Request(url)
 			r = urllib.request.urlopen(req).read()
-			return r
+			return json.loads(r.decode('utf-8'))
 		except HTTPError as e:
 			print("HTTPError in trial {}".format(i))
 			time.sleep(60)
@@ -47,7 +47,7 @@ def request_gateways(rad_km=250,lat=46.52,lon=6.56):
 		try:
 			req = urllib.request.Request(url)
 			r = urllib.request.urlopen(req).read()
-			return r
+			return json.loads(r.decode('utf-8'))
 		except HTTPError as e:
 			print("HTTPError in trial {}".format(i))
 			time.sleep(60)
@@ -62,7 +62,7 @@ def add_gateway(eui,lat,lon):
 		try:
 			req = urllib.request.Request(url,{})
 			r = urllib.request.urlopen(req).read()
-			return r 
+			return json.loads(r.decode('utf-8'))
 		except HTTPError as e:
 			print("HTTPError in trial {}".format(i))
 			time.sleep(60)
