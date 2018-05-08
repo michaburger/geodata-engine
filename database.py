@@ -10,8 +10,8 @@ TIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
 starttime = dt.datetime.now() - dt.timedelta(days=365)
 
 
-def request_track(track,txpow=0,sf=7,dev='78AF580300000485',start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
-	url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&device=" + str(dev)
+def request_track(track,txpow=0,sf=7,dev='78AF580300000485',hdop=500,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
+	url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&device=" + str(dev) + "&hdop=" + str(hdop)
 	for i in range(5):
 		try:
 			req = urllib.request.Request(url)

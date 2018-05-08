@@ -36,11 +36,11 @@ def temperature_rssi(bunch, plot_title):
 		for idx, gtw_list in enumerate(LRRs):
 			for idy, gtw_data in enumerate(element['gateway_id']):
 				if(gtw_list == gtw_data):
-					rssi[idx][i] = element['gateway_rssi'][idy]
+					rssi[idx][i] = element['gateway_esp'][idy]
 	plt.figure()
 	plt.subplot(211)
 	plt.xlabel('Temperature °C')
-	plt.ylabel('RSSI')
+	plt.ylabel('ESP')
 
 	plt.title(plot_title)
 
@@ -51,7 +51,7 @@ def temperature_rssi(bunch, plot_title):
 
 	plt.subplot(212)
 	plt.xlabel('Humidity')
-	plt.ylabel('RSSI')
+	plt.ylabel('ESP')
 
 	#plot all Gateway data
 	for idx in range(len(LRRs)):

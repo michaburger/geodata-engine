@@ -46,10 +46,10 @@ mapping.add_gateway_layer(db.request_gateways(25))
 
 #Add Track 1 as a point layer
 #gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
-gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00"))
+gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',500,"2018-04-27_11:00:00"))
 
 for cnt, g in enumerate(gtws):
-	mapping.add_point_layer(db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00","2018-04-27_12:00:00"),gtws[cnt],gtws[cnt],3,500)
+	mapping.add_point_layer(db.request_track(20,0,7,'78AF580300000485',500,"2018-04-27_11:00:00","2018-04-27_12:00:00"),gtws[cnt],gtws[cnt],3,500)
 	#geo.distance_list(db.request_gateways(30),db.request_track(6, start="2018-03-20_00:00:00"),gtws[cnt],6)
 
 #mapping.add_point_layer(db.request_track(1),"3 satellites",3,500)
@@ -95,7 +95,7 @@ mapping.output_map('Circles.html')
 #Start measures with SF7
 #plot.time_graph_rssi(db.request_track(2,0,7,"2018-04-03_16:00:00","2018-04-05_10:00:00"),"Weather conditions 4.3.2018")
 #plot.time_graph_rssi(db.request_track(2,0,7,"2018-04-18_17:00:00","2018-04-19_10:00:00"),"Weather conditions 18.4.2018")
-#plot.temperature_rssi(db.request_track(2),"RSSI vs Weather conditions SF7")
+#plot.temperature_rssi(db.request_track(2),"ESP vs Weather conditions SF7")
 
 
 '''
@@ -187,23 +187,33 @@ print("ACCURACY: "+str(accuracy)+"%")
 print("Wrongly classified tracks: (correct track, classification, jaccard index) \n"+str(wrongly_classified_tracks))
 print("************************************")
 '''
+
+
+
 #4.5.2018 - Clustering
-clustering_test_track = db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00","2018-04-27_12:00:00")
+clustering_test_track = db.request_track(20,0,7,'78AF580300000485',250,"2018-04-27_11:00:00","2018-05-09_12:00:00")
 
-gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',"2018-04-27_11:00:00","2018-04-27_12:00:00"))
+gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',250,"2018-04-27_11:00:00","2018-05-09_12:00:00"))
 
-#have around 30 points per cluster
-nb_clusters = int(len(clustering_test_track)/50)
+#have around 10-30 points per cluster
+nb_clusters = int(len(clustering_test_track)/15)
 print("Number of clusters: {}".format(nb_clusters))
 
-set_with_clusters = cl.distance_clustering(clustering_test_track,nb_clusters=nb_clusters)
+#Agglomerative clustering
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters)
+
+#DBSCAN clustering
+#set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
+
 cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #draw map
-#for cnt, g in enumerate(gtws):
-	#mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,500,coloring='clusters')
-#mapping.output_map('maps/clustering-map.html')
+for cnt, g in enumerate(gtws):
+	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,250,coloring='clusters')
+mapping.output_map('maps/clustering-map-agglomerative.html')
 
+
+'''
 #24.4.2018 Tensorflow
 
 #reference_gateways = gateway_list() #for reference-track-clustering
@@ -241,7 +251,7 @@ param_nb_data = [10000]
 #write headers
 try:
 	f = open('/data/multitest-weekend.log','w')
-	f.write('Epochs: {}, Train-test: {}, batch: {}, mean over 10 last epochs.'.format(EPOCHS,TRAIN_TEST,BATCH))
+	f.write('Epochs: {}, Train-test: {}, batch: {}, mean over 10 last epochs.\n'.format(EPOCHS,TRAIN_TEST,BATCH))
 	f.write("layers\tneurons\tdropout\tnb_measurement\tnb_data\ttraining_accuracy\tvalidation_accuracy\toverfit\texecution_time\n")
 	f.close()
 except:
@@ -286,6 +296,7 @@ for n_dataset in param_nb_data:
 							print("WARNING: File write error. Logging disabled! ")
 
 						print("***PARAMETERS***")
+						print("Layser: {}".format(layers))
 						print("Activation function: "+activation)
 						print("Batch size: "+str(BATCH))
 						print("Dataset size: "+str(n_dataset))
@@ -297,6 +308,6 @@ for n_dataset in param_nb_data:
 						print("Val_acc: "+str(val_acc_arr))
 						print("Execution time (s): "+str(ex_arr))
 
-
+'''
 
 

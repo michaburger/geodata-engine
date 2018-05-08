@@ -142,6 +142,8 @@ def pick_color_clusters(cluster):
 			color_list.append('#'+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))+hexcol(random.randint(0,255)))
 	if cluster >= 100:
 		return "#ffffff"
+	elif cluster == -1:
+		return '#ffffff'
 	else:
 		return color_list[cluster-1]
 
@@ -186,10 +188,7 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 				rssi.append(trk['gateway_rssi'])
 				snr.append(trk['gateway_snr'])
 				esp.append(trk['gateway_esp'])
-				if 'cluster' in trk:
-					cluster.append(str(trk['track_ID']))
-				else:
-					cluster.append("Not set")
+				cluster.append(str(trk['track_ID']))
 				
 				#used for the color
 				heat.append((int)(-1*trk['gateway_rssi'][i]))
