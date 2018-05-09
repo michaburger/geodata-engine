@@ -200,7 +200,7 @@ nb_clusters = int(len(clustering_test_track)/15)
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
-set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters)
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=10)
 
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
@@ -211,6 +211,11 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 for cnt, g in enumerate(gtws):
 	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,250,coloring='clusters')
 mapping.output_map('maps/clustering-map-agglomerative.html')
+
+#9.5.2018 - Second clustering step on feature space
+
+#calculate feature space like done for classification preparation
+
 
 
 '''

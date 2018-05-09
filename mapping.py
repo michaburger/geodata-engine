@@ -195,10 +195,12 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 
 	for lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat,cluster in zip(lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat,cluster):
 		#print("heat: "+str(heat)+", color: "+pick_color(heat))
+		#create delete link
+		timeformat = str(time).split(".")
+
 		ftr1.add_child(folium.CircleMarker(location=[lat,lon],
 			fill=True,radius=10,
-			popup="<b>Timestamp: </b>" + str(timest) + "<br/>"
-			+ "<b>Time: </b>" + str(time) + "<br/>"
+			popup="<b>Time: </b>" + str(time) + "<br/>"
 			+ "<b>Device: </b>" + str(dev) + "<br/>"
 			+ "<b>Temperature: </b>" + str(temp) + "°C<br/>"
 			+ "<b>Humidity: </b>" + str(hum) + "% RH</br>"
@@ -209,7 +211,8 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 			+ "<b>RSSI: </b>" + str(rssi) + "<br/>"
 			+ "<b>SNR: </b>" + str(snr) + "<br/>"
 			+ "<b>ESP: </b>" + str(esp) + "<br/>"
-			+ "<b>Cluster: </b>" + str(cluster) + "<br/>",
+			+ "<b>Cluster: </b>" + str(cluster) + "<br/>"
+			+ "<b><a href=https://spaghetti.scapp.io/query?delpoint="+timeformat[0]+" target=\"_blank\">Delete point</a></b>",
 			color='',
 			fill_color=pick_color(heat,int(cluster),color_clusters),
 			fill_opacity=pick_opacity(heat)))

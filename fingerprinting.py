@@ -102,6 +102,8 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 
 	return ((data_train, labels_train),(data_test,labels_test))
 
+def 
+
 
 def jaccard_classifier(input_track, **kwargs):
 	'''

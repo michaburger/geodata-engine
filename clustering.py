@@ -79,9 +79,12 @@ def distance_clustering_dbscan(dataset, **kwargs):
 def distance_clustering_agglomerative(dataset, **kwargs):
 	#default values
 	nb_clusters = 10
+	min_points = 5
 
 	if 'nb_clusters' in kwargs:
 		nb_clusters = kwargs['nb_clusters']
+	if 'min_points' in kwargs:
+		min_points = kwargs['min_points']
 
 	#create array containing only coordinates and the points in the same order as dataset
 	coords = []
@@ -94,9 +97,16 @@ def distance_clustering_agglomerative(dataset, **kwargs):
 
 	clusters = model.fit_predict(X)
 
+	#count points per cluster
+	unique, counts = np.unique(clusters, return_counts=True)
+	occurrence = dict(zip(unique, counts))
+
 	#add cluster id to point data
 	for i, point in enumerate(dataset):
-		point.update({'track_ID':clusters[i]})
+		if occurrence[clusters[i]] >= min_points:
+			point.update({'track_ID':clusters[i]})
+		else:
+			point.update({'track_ID':-1})
 	print("Agglomerative clustering done!")
 	return dataset
 
