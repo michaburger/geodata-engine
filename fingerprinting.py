@@ -84,6 +84,88 @@ def create_comparison_set(d_size,nb_measures):
 
 #tf.enable_eager_execution()
 
+def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
+	'''
+	@summary: Creates a random sample dataset from track data
+	@param track: the input track array
+	@param gateway_ref: Reference gateway array, the output will be according to this order
+	@kwargs dataset_size: how many points the dataset will contain per track. 
+							The total dataset size is dataset_size * nb_tracks
+	@kwargs nb_measures: over how many random points a dataset item is generated
+	@result: (dataset in tf format, track id as labels)
+	'''
+	#Set default values
+	dataset_size = 20 # per track!
+	nb_measures = 10
+	train_test = 0.5
+	offset = 0
+
+	if 'dataset_size' in kwargs:
+		dataset_size = kwargs['dataset_size']
+	if 'nb_measures' in kwargs:
+		nb_measures = kwargs['nb_measures']
+	if 'train_test' in kwargs:
+		train_test = kwargs['train_test']
+	if 'offset' in kwargs:
+		offset = kwargs['offset']
+
+	if train_test > 1 or train_test < 0:
+		print("ERROR: Impossible train-test ratio")
+		return "ERROR: Impossible train-test ratio"
+
+	compilation_train = []
+	compilation_test = []
+
+	df_train = pd.DataFrame()
+	df_test = pd.DataFrame()
+
+	for track in track_array_json:
+		#for every track we need to have some points which are only training and some distinct other points for testing
+		track_train = track[:int(train_test*len(track))]
+		track_test = track[int(train_test*len(track)):]
+
+		trk_dict_train = create_dataset(track_train,dataset_size=dataset_size,nb_measures=nb_measures,offset=offset)
+		trk_dict_test = create_dataset(track_test,dataset_size=dataset_size,nb_measures=nb_measures,offset=offset)
+
+		#attribute the gateway features to the correct place in the gateway reference array
+		#for every point in the dataset
+		#training set
+		for p in trk_dict_train:
+			tensor = []
+			for eui in gateway_ref:
+				if eui in p['Gateways']:
+					tensor.append(-1*p['Gateways'][eui][0])
+					tensor.append(40*p['Gateways'][eui][1])
+					tensor.append(200*p['Gateways'][eui][2])
+				else:
+					for i in range(3):
+						tensor.append(0)
+			tensor_pd = pd.DataFrame(data=[tensor], columns=['C{}'.format(i) for i in range(1,len(tensor)+1)])
+			info_pd = pd.DataFrame(data=[[p['Track'],p['Position'][0],p['Position'][1]]],columns=['Label1','Lat','Lon'])
+			df_train= pd.concat([df_train,pd.concat([tensor_pd,info_pd],axis=1)])
+		#create random order
+		df_train = df_train.sample(frac=1).reset_index(drop=True)
+
+		#theoretically returning a testing set could be removed from this function as I will do the split later.
+		if train_test != 1:
+			for p in trk_dict_test:
+				tensor = []
+				for eui in gateway_ref:
+					if eui in p['Gateways']:
+						tensor.append(-1*p['Gateways'][eui][0])
+						tensor.append(40*p['Gateways'][eui][1])
+						tensor.append(200*p['Gateways'][eui][2])
+					else:
+						for i in range(3):
+							tensor.append(0)
+				tensor_pd = pd.DataFrame(data=[tensor], columns=['C{}'.format(i) for i in range(1,len(tensor)+1)])
+				info_pd = pd.DataFrame(data=[[p['Track'],p['Position'][0],p['Position'][1]]],columns=['Label1','Lat','Lon'])
+				df_test= pd.concat([df_test,pd.concat([tensor_pd,info_pd],axis=1)])
+			#create random order
+			df_test = df_test.sample(frac=1).reset_index(drop=True)
+
+	return df_train,df_test
+
 def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	'''
 	@summary: Creates a random sample dataset from track data
@@ -126,7 +208,6 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 		#attribute the gateway features to the correct place in the gateway reference array
 		#for every point in the dataset
 		#training set
-
 		for p in trk_dict_train:
 			tensor = []
 			for eui in gateway_ref:
@@ -135,7 +216,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 					tensor.append(arr)
 				else:
 					tensor.append([0,0,0])
-			compilation_train.append({"Data":tensor,"Label":p['Track']})
+			compilation_train.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 		for p in trk_dict_test:
 			tensor = []
@@ -145,7 +226,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 					tensor.append(arr)
 				else:
 					tensor.append([0,0,0])
-			compilation_test.append({"Data":tensor,"Label":p['Track']})
+			compilation_test.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 	#create random order
 	random.shuffle(compilation_test)

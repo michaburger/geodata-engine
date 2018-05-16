@@ -5,6 +5,7 @@ import json
 import plot
 import random
 import numpy as np
+import pandas as pd
 import geometry as geo
 import fingerprinting as fp
 import clustering as cl
@@ -215,10 +216,14 @@ mapping.output_map('maps/clustering-map-agglomerative.html')
 '''
 
 #9.5.2018 - Applying PCA
-
-#calculate feature space like done for classification preparation
-training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=10,nb_measures=20,train_test=0.5,offset=0)
+#training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
 #fp.apply_pca(training_set,nb_clusters,0)
+
+#calculate feature space like done for classification preparation. Is giving two times the same feature space as output. 
+dataset_pd, empty = fp.create_dataset_pandas(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1)
+dataset_2_cl, n_clusters_2_cl = cl.clustering_feature_space(dataset_pd)
+print(dataset_2_cl.loc[:,['Label1','Label2']].values.tolist())
+
 
 #16.5.2018 - Second clustering step using DBSCAN - without PCA for instance.
 
