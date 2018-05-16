@@ -1,5 +1,6 @@
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import tensorflow.contrib.eager as tfe 
 import random
@@ -10,8 +11,72 @@ import matplotlib.pyplot as plt
 from time import time
 import sys
 from operator import itemgetter, attrgetter
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 comparison_datasets=[]
+
+def hexcol(col):
+	hexstr = str(hex(col).replace('0x',''))
+	if col <16:
+		return '0'+ hexstr
+	else:
+		return hexstr
+def random_color():
+	return '#'+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))
+
+#apply PCA and return pandas table. When nb_dim > 0, show the first n dimensions on a plot.
+def apply_pca(d,nb_clusters,nb_dim):
+	dataset = np.array(d[0])
+	labels = np.array(d[1])
+
+	#flatten matrix
+	nsamples, nx, ny = dataset.shape
+	d2_dataset = dataset.reshape((nsamples,nx*ny))
+
+	#normalize data to apply PCA
+	data = StandardScaler().fit_transform(d2_dataset)
+
+	nb_components = 30
+	pca = PCA(n_components=nb_components)
+	principalComponents = pca.fit_transform(data)
+	
+	labelFrame = pd.DataFrame(data=labels,columns=['label'])
+	principalDf = pd.DataFrame(data = principalComponents
+             , columns = ['PC{}'.format(i) for i in range (1,nb_components+1)])
+	finalDf = pd.concat([principalDf, labelFrame], axis = 1)
+	
+	if nb_dim > 0:
+		fig = plt.figure()
+		fig.subplots_adjust(left=0.05,bottom=0.08,right=0.97,top=0.95,wspace=0.15,hspace=0.15)
+		plt.suptitle('PCA analysis on feature space')
+
+		targets = [i for i in range (1,nb_clusters+1)]
+		colors = [random_color() for i in range (1,nb_clusters+1)]
+
+		count=0
+		for row in range(1,nb_dim+1):
+			for col in range(1,nb_dim+1):
+				count += 1
+				ax = fig.add_subplot(nb_dim,nb_dim,count)
+
+				#trick to show axis label only at the left and bottom
+				if col == 1:
+					ax.set_ylabel('PC{}'.format(row))
+				if row == nb_dim:
+					ax.set_xlabel('PC{}'.format(col))
+				for target, color in zip(targets,colors):
+					indicesToKeep = finalDf['label'] == target
+					ax.scatter(finalDf.loc[indicesToKeep, 'PC{}'.format(col)]
+							, finalDf.loc[indicesToKeep, 'PC{}'.format(row)]
+							, c = color, s = 50)
+				if row == 1 and col == nb_dim:
+					ax.legend(targets)
+					ax.set_zorder(1)
+		plt.show()
+	
+	#print(pca.explained_variance_ratio_)
+	return finalDf
 
 def create_comparison_set(d_size,nb_measures):
 	for trk_comp in range(3,12):
@@ -102,8 +167,6 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 
 	return ((data_train, labels_train),(data_test,labels_test))
 
-def 
-
 
 def jaccard_classifier(input_track, **kwargs):
 	'''
@@ -143,43 +206,6 @@ def jaccard_classifier(input_track, **kwargs):
 		similarity_list.append((i+3,sim/nb_iter))
 	similarity_list.sort(key=itemgetter(1),reverse=True)
 	return(similarity_list[0])
-				
-def jaccard_classifier_best(input_track, **kwargs):
-	'''
-	@summary: Track classification engine based on jaccard similarity
-	@param input_track: the input track to classify
-	@kwargs d_size: how many points the comparison dataset will contain per track. 
-	@kwrgs nb_iter: on how many examples the mean is calculated
-	@kwargs nb_measures: over how many random points the comparison dataset item is generated
-	@result: tuple (most likely track, similarity index)
-	'''
-	d_size = 100
-	nb_iter = 1
-	nb_measures = 30
-	if 'd_size' in kwargs:
-		d_size = kwargs['d_size']
-	if 'nb_measures' in kwargs:
-		nb_measures = kwargs['nb_measures']
-	if 'nb_iter' in kwargs:
-		nb_iter = kwargs['nb_iter']
-
-	for i in range(nb_iter):
-		similarity = []
-		print(".",end="")
-		sys.stdout.flush() #display point immediately
-		for trk_comp in range(3,12):
-			comparison_dataset = create_dataset(db.request_track(trk_comp),dataset_size=d_size,nb_measures=nb_measures)
-			c = 0
-			for p1 in input_track:
-				for p2 in comparison_dataset:
-					c += jaccard_index(p1,p2)
-			mean = c / (d_size**2)
-			similarity.append((trk_comp,mean))
-		similarity.sort(key=itemgetter(1),reverse=True)
-		print(similarity[0])
-		print(similarity[1])
-	#if best value not reached...
-	return(similarity[0])
 
 def create_dataset(track, **kwargs):
 	'''
@@ -199,6 +225,8 @@ def create_dataset(track, **kwargs):
 	if 'nb_measures' in kwargs:
 		nb_measures = kwargs['nb_measures']
 
+	if len(track) == 0:
+		return []
 	if nb_measures > len(track):
 		nb_measures = len(track)
 		print("WARNING: nb_measures reduced to "+str(nb_measures))

@@ -12,31 +12,33 @@ starttime = dt.datetime.now() - dt.timedelta(days=365)
 
 def request_track(track,txpow=0,sf=7,dev='78AF580300000485',hdop=500,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
 	url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&device=" + str(dev) + "&hdop=" + str(hdop)
-	for i in range(5):
+	tries = 5
+	for i in range(tries):
 		try:
 			req = urllib.request.Request(url)
 			r = urllib.request.urlopen(req).read()
 			return json.loads(r.decode('utf-8'))
 		except HTTPError as e:
-			print("HTTPError in trial {}".format(i))
+			print("WARNING: HTTPError in trial {} of total {} retries".format(i,tries))
 			time.sleep(60)
 		except URLError as e:
-			print("URLError in trial {}".format(i))
+			print("WARNING: URLError in trial {} of total {} retries".format(i,tries))
 			time.sleep(60)
 	return "[]"
 
 def request_track_no_params(track,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
 	url = track_query_url + str(track) + "&start=" + start + "&end=" + end
-	for i in range(5):
+	tries = 5
+	for i in range(tries):
 		try:
 			req = urllib.request.Request(url)
 			r = urllib.request.urlopen(req).read()
 			return json.loads(r.decode('utf-8'))
 		except HTTPError as e:
-			print("HTTPError in trial {}".format(i))
+			print("WARNING: HTTPError in trial {} of total {} retries".format(i,tries))
 			time.sleep(60)
 		except URLError as e:
-			print("URLError in trial {}".format(i))
+			print("WARNING: URLError in trial {} of total {} retries".format(i,tries))
 			time.sleep(60)
 	return "[]"
 

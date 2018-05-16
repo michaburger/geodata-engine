@@ -73,7 +73,7 @@ def distance_clustering_dbscan(dataset, **kwargs):
 	for i, point in enumerate(dataset):
 		point.update({'track_ID':labels[i]})
 	print("DBSCAN clustering done!")
-	return dataset, n_clusters
+	return dataset, n_clusters + 1
 
 #unsupervised clustering based on physical distance between the points. Agglomerative method
 def distance_clustering_agglomerative(dataset, **kwargs):
@@ -101,7 +101,7 @@ def distance_clustering_agglomerative(dataset, **kwargs):
 	unique, counts = np.unique(clusters, return_counts=True)
 	occurrence = dict(zip(unique, counts))
 
-	#add cluster id to point data
+	#add cluster id to point data.
 	for i, point in enumerate(dataset):
 		if occurrence[clusters[i]] >= min_points:
 			point.update({'track_ID':clusters[i]})
@@ -112,9 +112,10 @@ def distance_clustering_agglomerative(dataset, **kwargs):
 
 #split cluster dataset into array of datasets for each cluster, to be used to plot on the map like different tracks.
 def cluster_split(dataset, nb_clusters, **kwargs):
-	cluster_array = [[] for i in range(nb_clusters)]
+	cluster_array = [[] for i in range(nb_clusters-1)]
 
 	for point in dataset:
 		cluster_id = point['track_ID']
-		cluster_array[cluster_id-1].append(point)
+		if cluster_id >= 0:
+			cluster_array[cluster_id].append(point)
 	return cluster_array

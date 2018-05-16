@@ -207,14 +207,20 @@ set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,n
 
 cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
+'''
 #draw map
 for cnt, g in enumerate(gtws):
 	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,250,coloring='clusters')
 mapping.output_map('maps/clustering-map-agglomerative.html')
+'''
 
-#9.5.2018 - Second clustering step on feature space
+#9.5.2018 - Applying PCA
 
 #calculate feature space like done for classification preparation
+training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=10,nb_measures=20,train_test=0.5,offset=0)
+#fp.apply_pca(training_set,nb_clusters,0)
+
+#16.5.2018 - Second clustering step using DBSCAN - without PCA for instance.
 
 
 
