@@ -122,40 +122,22 @@ def cluster_split(dataset, nb_clusters, **kwargs):
 	return cluster_array
 
 #clustering on feature-space, based on pandas dataset as input
-def clustering_feature_space(df):
-	max_unlabeled = 0.05
-
+def clustering_feature_space(df, **kwargs):
 	features = df.drop(columns=['Label1','Lat','Lon'])
 
-	#X = np.array(coords)
+	nb_clusters = 10
 
-	#metrics
-	unlabeled = 1.0
-	eps  = 180
-	step = 1
+	if 'nb_clusters' in kwargs:
+		nb_clusters = int(kwargs['nb_clusters'])
 
-	#optimise eps to reach correct fraction of unlabeled points
-	while unlabeled > max_unlabeled:
-		db = DBSCAN(eps=eps,min_samples=2).fit(features)
-		labels = db.labels_ 
-		# Number of clusters in labels, ignoring noise if present.
-		n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-		#count elements
-		unique, counts = np.unique(labels, return_counts=True)
-		if -1 in labels:
-			n_outliers = dict(zip(unique, counts))[-1]
-		else:
-			n_outliers = 0
-		unlabeled = float(n_outliers)/len(labels)
-		print('EPS: {} - unlabeled points: {}'.format(eps,unlabeled))
-		eps += step
+	model = AgglomerativeClustering(n_clusters=nb_clusters,linkage="average")
+	model.fit(features)
+
+	labels = model.fit_predict(features)
 
 	labels_pd = pd.DataFrame(data=labels,columns=['Label2'])
 	dataset = pd.concat([df,labels_pd],axis=1)
-	print(dataset)
-	print("nb clusters: {}".format(n_clusters))
-	print("nb outliers: {}".format(n_outliers))
-	
-	
-	print("DBSCAN clustering done!")
-	return dataset, n_clusters + 1
+
+	print("Agglomerative clustering done!")
+	return dataset
+

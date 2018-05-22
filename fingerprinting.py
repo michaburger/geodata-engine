@@ -97,7 +97,7 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 	#Set default values
 	dataset_size = 20 # per track!
 	nb_measures = 10
-	train_test = 0.5
+	train_test = 1
 	offset = 0
 
 	if 'dataset_size' in kwargs:
