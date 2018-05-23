@@ -5,6 +5,7 @@ import json
 from sklearn.cluster import AgglomerativeClustering
 from sklearn import metrics
 from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import StandardScaler
 
 
 def get_gateways(dataset):
@@ -122,22 +123,119 @@ def cluster_split(dataset, nb_clusters, **kwargs):
 	return cluster_array
 
 #clustering on feature-space, based on pandas dataset as input
-def clustering_feature_space(df, **kwargs):
+def clustering_feature_space_agglomerative(df, **kwargs):
 	features = df.drop(columns=['Label1','Lat','Lon'])
 
 	nb_clusters = 10
+	normalize = True
 
 	if 'nb_clusters' in kwargs:
 		nb_clusters = int(kwargs['nb_clusters'])
+	if 'normalize' in kwargs:
+		if kwargs['normalize'] == False:
+			normalize = False
+
+	#normalize feature space for a more appropriate clustering
+	if normalize:
+		data = StandardScaler().fit_transform(features)
+	else: 
+		data = features
 
 	model = AgglomerativeClustering(n_clusters=nb_clusters,linkage="average")
-	model.fit(features)
+	model.fit(data)
 
-	labels = model.fit_predict(features)
+	labels = model.fit_predict(data)
 
 	labels_pd = pd.DataFrame(data=labels,columns=['Label2'])
 	dataset = pd.concat([df,labels_pd],axis=1)
 
-	print("Agglomerative clustering done!")
 	return dataset
 
+def clustering_feature_space_dbscan(df, **kwargs):
+	features = df.drop(columns=['Label1','Lat','Lon'])
+
+	max_unlabeled = 0.05
+	min_samples = 5
+	normalize = True
+
+	#initialization for while loop and standard parameter
+	unlabeled = 1.0
+
+	if 'max_unlabeled' in kwargs:
+		max_unlabeled = kwargs['max_unlabeled']
+	if 'min_samples' in kwargs:
+		min_samples = kwargs['min_samples']
+	if 'normalize' in kwargs:
+		if kwargs['normalize'] == False:
+			normalize = False
+
+	if normalize:
+		data = StandardScaler().fit_transform(features)
+		eps = 2
+		step = 0.1
+	else:
+		data = features
+		eps  = 120
+		step = 5
+
+	#optimise eps to reach correct fraction of unlabeled points
+
+	while unlabeled > max_unlabeled:
+		db = DBSCAN(eps=eps,min_samples=min_samples).fit(data)
+		labels = db.labels_
+		# Number of clusters in labels, ignoring noise if present.
+		n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+		#count elements
+		unique, counts = np.unique(labels, return_counts=True)
+		if -1 in labels:
+			n_outliers = dict(zip(unique, counts))[-1]
+		else:
+			n_outliers = 0
+		unlabeled = float(n_outliers)/len(labels)
+		print('EPS: {} - unlabeled points: {}'.format(eps,unlabeled))
+		eps += step
+	#print('Min_samples: {}'.format(min_samples))
+	#print("nb clusters: {}".format(n_clusters))
+	
+
+	#print("nb clusters: {}".format(n_clusters))
+	#print("nb outliers: {}".format(n_outliers))
+	#print("metrics: {}".format(metrics))
+	
+	#add cluster id to point data
+	labels_pd = pd.DataFrame(data=labels,columns=['Label2'])
+	dataset = pd.concat([df,labels_pd],axis=1)
+
+	return dataset, n_clusters + 1
+
+#compute the fraction of points which are in the same cluster for the first and also second clustering.
+def compute_clustering_metrics(df):
+	#calculate metrics and put it in the form {2nd_cluster:{1st_cluster_A_count:N, 1st_cluster_B_count:N}}
+	labels = df.loc[:,['Label1','Label2']].values.tolist()
+	pairs_count = {}
+	for pair in labels:
+		if str(pair[0]) in pairs_count:
+			if str(pair[1]) in pairs_count[str(pair[0])]:
+				pairs_count[str(pair[0])].update({str(pair[1]):pairs_count[str(pair[0])][str(pair[1])]+1})
+			else:
+				pairs_count[str(pair[0])].update({str(pair[1]):1})
+		else:
+			pairs_count.update({str(pair[0]):{str(pair[1]):1}})
+
+	#calculate metrics - how many points of the first cluster are still in the second cluster?
+	#approximate metrics, works only for nb_2nd < nb_1st 
+	correct_count = 0
+	false_count = 0
+	for cl1 in pairs_count.items():
+		majority = 0
+		minority = 9999999
+		for cl2 in cl1[1].values():
+			if cl2 > majority:
+				majority = cl2
+			if cl2 < minority:
+				minority = cl2
+		correct_count += majority
+		for cl2 in cl1[1].values():
+			if cl2 < majority:
+				false_count += cl2
+	return float(correct_count) / float(correct_count + false_count)

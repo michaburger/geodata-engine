@@ -219,29 +219,72 @@ mapping.output_map('maps/clustering-map-agglomerative.html')
 #training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
 #fp.apply_pca(training_set,nb_clusters,0)
 
-cl_size = 0.5
-step = 0.01
+
+
+'''
+#****************************
+#AGGLOMERATIVE 2ND CLUSTERING
+dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
+cl_size = 0.1
+step = 0.05
+
+result = []
 while True:
 	#calculate feature space like done for classification preparation. Is giving two times the same feature space as output. 
-	dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=10, nb_measures=10)
-	dataset_2_cl = cl.clustering_feature_space(dataset_pd,nb_clusters=nb_clusters*cl_size)
+	dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=nb_clusters*cl_size,normalize=True)
+	metrics = cl.compute_clustering_metrics(dataset_2_cl)
 
-	#calculate metrics and put it in the form {2nd_cluster:{1st_cluster_A_count:N, 1st_cluster_B_count:N}}
-	labels = dataset_2_cl.loc[:,['Label1','Label2']].values.tolist()
-	pairs_count = {}
-	for pair in labels:
-		if str(pair[0]) in pairs_count:
-			if str(pair[1]) in pairs_count[str(pair[0])]:
-				pairs_count[str(pair[0])].update({str(pair[1]):pairs_count[str(pair[0])][str(pair[1])]+1})
-			else:
-				pairs_count[str(pair[0])].update({str(pair[1]):1})
-		else:
-			pairs_count.update({str(pair[0]):{str(pair[1]):1}})
-	print(pairs_count)
-	break
+	print("Cluster size: {} - Metrics: {}".format(cl_size,metrics))
+	#print(".",end=" ",flush=True)
+	result.append({'Cluster size':cl_size,'Correct Points':metrics})
+
+	next 3 lines for agglomerative only
+	cl_size += step
+	if cl_size >= 1.0+step:
+		break
+
+result_pd=pd.DataFrame(data=result,columns=['Cluster size','Correct Points'])
+print(result_pd)
+result_pd.to_csv('results_2nd_clustering_agglomerative.csv')
+#****************************
+'''
 
 
-#16.5.2018 - Second clustering step using DBSCAN - without PCA for instance.
+#****************************
+#DBSCAN 2ND CLUSTERING 
+dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
+min_samples = 1
+
+goal_reduction = 0.6
+goal_metrics = 0.96
+
+result = []
+while True:
+	#calculate feature space like done for classification preparation. Is giving two times the same feature space as output. 
+	dataset_2_cl, nb_cl = cl.clustering_feature_space_dbscan(dataset_pd,min_samples=min_samples,max_unlabeled=0.05,normalize=False)
+	#next line for dbscan only
+	cl_size = float(nb_cl)/nb_clusters
+	print("min_samples: {} - nb clusters: {}".format(min_samples,nb_cl))
+
+	metrics = cl.compute_clustering_metrics(dataset_2_cl)
+
+	print("Cluster size: {} - Metrics: {}".format(cl_size,metrics))
+	#uncomment next line for data logging
+	#result.append({'Cluster size':cl_size,'Correct Points':metrics})
+
+	min_samples += 2
+	if cl_size < goal_reduction and metrics > goal_metrics:
+		break
+
+#result_pd=pd.DataFrame(data=result,columns=['Cluster size','Correct Points'])
+#result_pd.to_csv('results_2nd_clustering_dbscan.csv')
+
+mapping.print_map_from_pandas(dataset_2_cl,nb_cl,'maps/clustering-2nd-dbscan.html')
+
+#****************************
+
+
+
 
 '''
 #24.4.2018 Tensorflow

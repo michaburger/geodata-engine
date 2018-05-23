@@ -220,6 +220,23 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 	map.add_child(ftr1)
 	print("Map: "+layerName+" rendered!")
 
+def print_map_from_pandas(df,nb_cl,path):
+	reduced = df.loc[:,['Lat','Lon','Label2']].values.tolist()
+
+	ftr1 = folium.FeatureGroup(name='Clustering')
+
+	for point in reduced:
+		if point[2] >= 0:
+			ftr1.add_child(folium.CircleMarker(location=[point[0],point[1]],
+				fill=True,radius=10,color='',
+				popup="Cluster " + str(int(point[2])),
+				fill_color=pick_color_clusters(int(point[2])),
+				fill_opacity=0.7
+				))
+	map.add_child(ftr1)
+	output_map(path)
+	print("Clustering map saved at " + path)
+
 #try to norm heat value to have better results
 def add_heatmap(pts, layerName='Heatmap', gateway= '0B030153', minSatellites = 1, minHDOP = 500):
 
