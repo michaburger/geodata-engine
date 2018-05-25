@@ -190,7 +190,7 @@ print("************************************")
 '''
 
 
-
+'''
 #4.5.2018 - Clustering
 clustering_test_track = db.request_track(20,0,7,'78AF580300000485',250,"2018-04-27_11:00:00","2018-05-09_12:00:00")
 
@@ -208,48 +208,29 @@ set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,n
 
 cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
-'''
+
 #draw map
-for cnt, g in enumerate(gtws):
-	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,250,coloring='clusters')
-mapping.output_map('maps/clustering-map-agglomerative.html')
-'''
+#for cnt, g in enumerate(gtws):
+#	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,250,coloring='clusters')
+#mapping.output_map('maps/clustering-map-agglomerative.html')
+
 
 #9.5.2018 - Applying PCA
 #training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
 #fp.apply_pca(training_set,nb_clusters,0)
 
+#24.5.2018
 
-
-'''
-#****************************
 #AGGLOMERATIVE 2ND CLUSTERING
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
-cl_size = 0.1
-step = 0.05
+dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.96)
 
-result = []
-while True:
-	#calculate feature space like done for classification preparation. Is giving two times the same feature space as output. 
-	dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=nb_clusters*cl_size,normalize=True)
-	metrics = cl.compute_clustering_metrics(dataset_2_cl)
-
-	print("Cluster size: {} - Metrics: {}".format(cl_size,metrics))
-	#print(".",end=" ",flush=True)
-	result.append({'Cluster size':cl_size,'Correct Points':metrics})
-
-	next 3 lines for agglomerative only
-	cl_size += step
-	if cl_size >= 1.0+step:
-		break
-
-result_pd=pd.DataFrame(data=result,columns=['Cluster size','Correct Points'])
-print(result_pd)
-result_pd.to_csv('results_2nd_clustering_agglomerative.csv')
-#****************************
+mapping.print_map_from_pandas(dataset_2_cl,nb_clusters,'maps/clustering-2nd-agglomerative.html')
 '''
 
 
+
+'''
 #****************************
 #DBSCAN 2ND CLUSTERING 
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
@@ -282,7 +263,7 @@ while True:
 mapping.print_map_from_pandas(dataset_2_cl,nb_cl,'maps/clustering-2nd-dbscan.html')
 
 #****************************
-
+'''
 
 
 
@@ -384,3 +365,11 @@ for n_dataset in param_nb_data:
 '''
 
 
+#25.5.2018 - Device calibration
+#dev485 = db.request_track(40,0,7,'78AF580300000485')
+#dev506 = db.request_track(40,0,7,'78AF580300000506')
+#plot.distance_plot_compare(dev485,'78AF580300000485',dev506,'78AF580300000506',db.request_gateways(30))
+#gtws = gateway_list_track(db.request_track(40,0,7,'78AF580300000506'))
+mapping.add_point_layer(db.request_track(40,0,7,'78AF580300000485'),'78AF580300000485','0B030153',3,500)
+mapping.add_point_layer(db.request_track(40,0,7,'78AF580300000506'),'78AF580300000506','0B030153',3,500)
+mapping.output_map('maps/device-comparison-all.html')

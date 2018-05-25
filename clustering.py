@@ -239,3 +239,32 @@ def compute_clustering_metrics(df):
 			if cl2 < majority:
 				false_count += cl2
 	return float(correct_count) / float(correct_count + false_count)
+
+#Second clustering step, fully integrated and taking into account the optimization metrics
+def agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,**kwargs):
+	cl_size = 1.0
+	step = 0.05
+
+	goal_metrics = 0.96
+
+	if 'metrics' in kwargs:
+		goal_metrics = kwargs['metrics']
+
+	result = []
+	while True:
+		#calculate feature space like done for classification preparation. Is giving two times the same feature space as output. 
+		dataset_2_cl = clustering_feature_space_agglomerative(dataset_pd,nb_clusters=nb_clusters*cl_size,normalize=False)
+		metrics = compute_clustering_metrics(dataset_2_cl)
+
+		print("Cluster size: {} - Metrics: {}".format(cl_size,metrics))
+		#print(".",end=" ",flush=True)
+		result.append({'Cluster size':cl_size,'Correct Points':metrics})
+
+		cl_size -= step
+		if cl_size < 0.0+step or metrics > goal_metrics:
+			break
+
+	#result_pd=pd.DataFrame(data=result,columns=['Cluster size','Correct Points'])
+	#print(result_pd)
+	#result_pd.to_csv('results_2nd_clustering_agglomerative.csv')
+	return dataset_2_cl

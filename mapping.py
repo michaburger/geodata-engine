@@ -100,7 +100,7 @@ def hexcol(col):
 	else:
 		return hexstr
 
-def pick_color_heat(heat,cluster,color_clusters):
+def pick_color_heat(heat):
 	low_range = 70 #ESP for green
 	mid_range = 90 #ESP for orange
 	high_range = 105 #ESP for red
@@ -178,7 +178,7 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 				lon.append(trk['gps_lon'])
 				timest.append(trk['timestamp']['$date']) #todo: format time
 				time.append(trk['time'])
-				dev.append(trk['deviceType'])
+				dev.append(trk['devEUI'])
 				hum.append(trk['humidity'])
 				temp.append(trk['temperature'])
 				sp.append(trk['sp_fact'])

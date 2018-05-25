@@ -231,13 +231,13 @@ def distance_plot(pts, g_dict, gateway_eui):
 	plt.subplot(211)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('RSSI')
-	plt.title('RSSI vs distance - SF'+ str(sf)+' - TXpower '+str(txpow))
+	plt.title('RSSI vs distance')
 	plt.scatter(dist, rssi)
 
 	plt.subplot(212)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('ESP')
-	plt.title('ESP vs distance - SF'+ str(sf)+' - TXpower '+str(txpow))
+	plt.title('ESP vs distance')
 	plt.scatter(dist, esp)
 
 	plt.show()
@@ -357,6 +357,102 @@ def distance_plot_all(pts, fix1, fix2, fix3, fix4, fix5, fix6,g_dict,txpow,sf):
 	plt.plot(xx,logfunc(xx, *popt_esp),c='r', label=esp_func)
 	#plt.plot(xx,logfunc(xx,popt_esp[0]-3*perr_esp[0],popt_esp[1]+3*perr_esp[1]),c='g',label="+3sigma")
 	#plt.plot(xx,logfunc(xx,popt_esp[0]+3*perr_esp[0],popt_esp[1]-3*perr_esp[1]),c='g',label="-3sigma")
+	plt.legend()
+
+	plt.show()
+
+#plots all gateways on the same plot
+def distance_plot_compare(dev1,dev1_name,dev2,dev2_name,g_dict):
+
+	dist_all = []
+	dist1 = []
+	dist2= []
+	rssi_all = []
+	esp_all = []
+	rssi_dev1 = []
+	esp_dev1 = []
+	rssi_dev2 = []
+	esp_dev2 = []
+
+	gtw_coords = (0,0)
+	for g in g_dict:
+		gtw_coords = (g['gateway_lat'], g['gateway_lon'])
+
+		#store points of the scatter plot (all points at EPFL campus)
+		for p in dev1:
+			for j, eui in enumerate(p['gateway_id']):
+				if g['gateway_id'] == p['gateway_id'][j]:
+					real_distance = geopy.distance.vincenty(gtw_coords,(p['gps_lat'],p['gps_lon'])).km * 1000
+					
+					#filter points with coords 0,0
+					if real_distance < 10000:
+						dist1.append(real_distance)
+						dist_all.append(real_distance)
+						rssi_dev1.append(p['gateway_rssi'][j])
+						esp_dev1.append(p['gateway_esp'][j])
+						rssi_all.append(p['gateway_rssi'][j])
+						esp_all.append(p['gateway_esp'][j])
+
+
+		for p in dev2:
+			for j, eui in enumerate(p['gateway_id']):
+				if g['gateway_id'] == p['gateway_id'][j]:
+					real_distance = geopy.distance.vincenty(gtw_coords,(p['gps_lat'],p['gps_lon'])).km * 1000
+					
+					#filter points with coords 0,0
+					if real_distance < 10000:
+						dist_all.append(real_distance)
+						dist2.append(real_distance)
+						rssi_dev2.append(p['gateway_rssi'][j])
+						esp_dev2.append(p['gateway_esp'][j])
+						rssi_all.append(p['gateway_rssi'][j])
+						esp_all.append(p['gateway_esp'][j])
+
+
+	rssi_par1 = []
+	esp_par1 = []
+	rssi_par2 = []
+	esp_par2 = []
+
+	xx = np.linspace(50,7000,2000)
+
+	popt_rssi1, pcov_rssi1 = curve_fit(logfunc, dist1, rssi_dev1)
+	popt_esp1, pcov_esp1 = curve_fit(logfunc, dist1, esp_dev1)
+	popt_rssi2, pcov_rssi2 = curve_fit(logfunc, dist2, rssi_dev2)
+	popt_esp2, pcov_esp2 = curve_fit(logfunc, dist2, esp_dev2)
+
+	#format log parameters
+	for i in range(2):
+		rssi_par1.append("{:2.2f}".format(popt_rssi1[i]))
+		esp_par1.append("{:2.2f}".format(popt_esp1[i]))
+		rssi_par2.append("{:2.2f}".format(popt_rssi2[i]))
+		esp_par2.append("{:2.2f}".format(popt_esp2[i]))
+	
+	rssi_func1 = rssi_par1[0]+"log(1/x)"+rssi_par1[1]
+	esp_func1 = esp_par1[0]+"log(1/x)"+esp_par1[1]
+	rssi_func2 = rssi_par2[0]+"log(1/x)"+rssi_par2[1]
+	esp_func2 = esp_par2[0]+"log(1/x)"+esp_par2[1]
+
+	plt.figure()
+	plt.subplot(211)
+	plt.xlabel('Distance (m)')
+	plt.ylabel('RSSI')
+	plt.title('RSSI vs distance')
+	plt.scatter(dist1, rssi_dev1, marker="x", label=dev1_name)
+	plt.scatter(dist2, rssi_dev2, marker="x", c='#ff7d00',label=dev2_name)
+	plt.plot(xx,logfunc(xx, *popt_rssi1),c='r', label=rssi_func1+" "+dev1_name)
+	plt.plot(xx,logfunc(xx, *popt_rssi2),c='b', label=rssi_func2+" "+dev2_name)
+	plt.legend()
+
+
+	plt.subplot(212)
+	plt.xlabel('Distance (m)')
+	plt.ylabel('ESP')
+	plt.title('ESP vs distance')
+	plt.scatter(dist1, esp_dev1, marker="x", label=dev1_name)
+	plt.scatter(dist2, esp_dev2, marker="x", c='#ff7d00',label=dev2_name)
+	plt.plot(xx,logfunc(xx, *popt_esp1),c='r', label=esp_func1+" "+dev1_name)
+	plt.plot(xx,logfunc(xx, *popt_esp2),c='b', label=esp_func2+" "+dev2_name)
 	plt.legend()
 
 	plt.show()
