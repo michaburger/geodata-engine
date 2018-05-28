@@ -41,26 +41,6 @@ with open('antenna.csv') as csvfile:
 			print(db.add_gateway(row[EUI],row[LAT],row[LON]))
 '''
 
-'''
-#get gateways from database and plot them on the map
-mapping.add_gateway_layer(db.request_gateways(25))
-
-#Add Track 1 as a point layer
-#gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
-gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',500,"2018-04-27_11:00:00"))
-
-for cnt, g in enumerate(gtws):
-	mapping.add_point_layer(db.request_track(20,0,7,'78AF580300000485',500,"2018-04-27_11:00:00","2018-04-27_12:00:00"),gtws[cnt],gtws[cnt],3,500)
-	#geo.distance_list(db.request_gateways(30),db.request_track(6, start="2018-03-20_00:00:00"),gtws[cnt],6)
-
-#mapping.add_point_layer(db.request_track(1),"3 satellites",3,500)
-
-#adding the heatmap
-#mapping.add_heatmap(db.request_track(1))
-
-#output map
-mapping.output_map('maps/clustering-map.html')
-'''
 
 #Trilateration - optimize parameters
 #geo.dist_to_gtw()
@@ -189,12 +169,34 @@ print("Wrongly classified tracks: (correct track, classification, jaccard index)
 print("************************************")
 '''
 
-
 '''
-#4.5.2018 - Clustering
-clustering_test_track = db.request_track(20,0,7,'78AF580300000485',250,"2018-04-27_11:00:00","2018-05-09_12:00:00")
+#OVERVIEW MAP
+#get gateways from database and plot them on the map
+mapping.add_gateway_layer(db.request_gateways(25))
 
-gtws = gateway_list_track(db.request_track(20,0,7,'78AF580300000485',250,"2018-04-27_11:00:00","2018-05-09_12:00:00"))
+#Add Track 1 as a point layer
+#gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',250,"2018-04-27_11:00:00"))
+
+for cnt, g in enumerate(gtws):
+	mapping.add_point_layer(db.request_track(20,0,7,'ALL',250,"2018-04-27_11:00:00"),gtws[cnt],gtws[cnt],3,500)
+	#geo.distance_list(db.request_gateways(30),db.request_track(6, start="2018-03-20_00:00:00"),gtws[cnt],6)
+
+#mapping.add_point_layer(db.request_track(1),"3 satellites",3,500)
+
+#adding the heatmap
+#mapping.add_heatmap(db.request_track(1))
+
+#output map
+mapping.output_map('maps/track20.html')
+'''
+
+
+
+#4.5.2018 - Clustering
+clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
+
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
 
 #have around 10-30 points per cluster
 nb_clusters = int(len(clustering_test_track)/15)
@@ -216,17 +218,17 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 
 #9.5.2018 - Applying PCA
-#training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
+#training_set, testi
+ng_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
 #fp.apply_pca(training_set,nb_clusters,0)
 
 #24.5.2018
-
 #AGGLOMERATIVE 2ND CLUSTERING
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
-dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.96)
+dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
 
-mapping.print_map_from_pandas(dataset_2_cl,nb_clusters,'maps/clustering-2nd-agglomerative.html')
-'''
+mapping.print_map_from_pandas(dataset_2_cl,nb_clusters,'maps/clustering-2nd-agglomerative-95.html')
+
 
 
 
@@ -365,6 +367,7 @@ for n_dataset in param_nb_data:
 '''
 
 
+'''
 #25.5.2018 - Device calibration
 #dev485 = db.request_track(40,0,7,'78AF580300000485')
 #dev506 = db.request_track(40,0,7,'78AF580300000506')
@@ -373,3 +376,4 @@ for n_dataset in param_nb_data:
 mapping.add_point_layer(db.request_track(40,0,7,'78AF580300000485'),'78AF580300000485','0B030153',3,500)
 mapping.add_point_layer(db.request_track(40,0,7,'78AF580300000506'),'78AF580300000506','0B030153',3,500)
 mapping.output_map('maps/device-comparison-all.html')
+'''

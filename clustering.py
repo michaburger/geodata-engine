@@ -114,8 +114,7 @@ def distance_clustering_agglomerative(dataset, **kwargs):
 
 #split cluster dataset into array of datasets for each cluster, to be used to plot on the map like different tracks.
 def cluster_split(dataset, nb_clusters, **kwargs):
-	cluster_array = [[] for i in range(nb_clusters-1)]
-
+	cluster_array = [[] for i in range(nb_clusters)]
 	for point in dataset:
 		cluster_id = point['track_ID']
 		if cluster_id >= 0:

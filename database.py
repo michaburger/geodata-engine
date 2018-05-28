@@ -11,7 +11,10 @@ starttime = dt.datetime.now() - dt.timedelta(days=365)
 
 
 def request_track(track,txpow=0,sf=7,dev='78AF580300000485',hdop=500,start="2018-01-01_00:00:00",end=str(dt.datetime.now().strftime(TIME_FORMAT))):
-	url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&device=" + str(dev) + "&hdop=" + str(hdop)
+	if dev=='ALL':
+		url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&hdop=" + str(hdop)
+	else:
+		url = track_query_url + str(track) + "&start=" + start + "&end=" + end + "&sf=" + str(sf) + "&txpow=" + str(txpow) + "&device=" + str(dev) + "&hdop=" + str(hdop)
 	tries = 5
 	for i in range(tries):
 		try:

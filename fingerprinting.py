@@ -306,6 +306,11 @@ def create_dataset(track, **kwargs):
 	if 'nb_measures' in kwargs:
 		nb_measures = kwargs['nb_measures']
 
+	#if the tracks have an offset (start with track 3 for exemple, default)
+	offset = 3
+	if 'offset' in kwargs:
+		offset = kwargs['offset']
+
 	if len(track) == 0:
 		return []
 	if nb_measures > len(track):
@@ -346,13 +351,10 @@ def create_dataset(track, **kwargs):
 		for u,v in q.items():
 			gtw_info.update({u:[gtw_info[u][0],np.sqrt(q[u][0]/q[u][1]),t[u][1]/freq_count]})
 		
-		#if the tracks have an offset (start with track 3 for exemple, default)
-		offset = 3
-		if 'offset' in kwargs:
-			offset = kwargs['offset']
 
-		#create the dataset
-		dataset.append({'Track':track[k]['track_ID']-offset,'Position':(track[k]['gps_lat'],track[k]['gps_lon']),'Gateways':gtw_info})
+		#create dataset. ok always taking the first point of a track, in the end with n=100 all points should be represented
+		#TODO: correct position / size of cluster instead of random point each time.
+		dataset.append({'Track':track[0]['track_ID']-offset,'Position':(track[0]['gps_lat'],track[0]['gps_lon']),'Gateways':gtw_info})
 
 	return dataset
 

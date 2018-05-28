@@ -137,10 +137,11 @@ def pick_color_heat(heat):
 
 def pick_color_clusters(cluster):
 	#fill color list array
+	nb_clusters = 500
 	if len(color_list)==0:
-		for i in range(100):
+		for i in range(nb_clusters):
 			color_list.append('#'+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))+hexcol(random.randint(0,255)))
-	if cluster >= 100:
+	if cluster >= nb_clusters:
 		return "#ffffff"
 	elif cluster == -1:
 		return '#ffffff'
@@ -172,8 +173,8 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 	lat, lon, time, timest, dev, hum, temp, sp, gps_sat, gps_hdop, gateways, rssi, snr, esp, heat, cluster = ([] for i in range(16))
 	for count, trk in enumerate(pts):
 		for i, gtw in enumerate(trk['gateway_id']):
-			#only consider points with at least 5 satellites and antenna 1
-			if(trk['gps_sat']>=minSatellites and trk['gps_hdop']<minHDOP) and gtw == gateway:
+			#only consider points with at least 5 satellites and antenna 1 and don't plot the cluster -1
+			if(trk['gps_sat']>=minSatellites and trk['gps_hdop']<minHDOP) and trk['track_ID'] >= 0 and gtw == gateway:
 				lat.append(trk['gps_lat'])
 				lon.append(trk['gps_lon'])
 				timest.append(trk['timestamp']['$date']) #todo: format time
