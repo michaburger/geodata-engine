@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import geopy.distance
 import json
 from sklearn.cluster import AgglomerativeClustering
 from sklearn import metrics
@@ -208,7 +209,7 @@ def clustering_feature_space_dbscan(df, **kwargs):
 	return dataset, n_clusters + 1
 
 #compute the fraction of points which are in the same cluster for the first and also second clustering.
-def compute_clustering_metrics(df):
+def compute_clustering_metrics_pointfraction(df):
 	#calculate metrics and put it in the form {2nd_cluster:{1st_cluster_A_count:N, 1st_cluster_B_count:N}}
 	labels = df.loc[:,['Label1','Label2']].values.tolist()
 	pairs_count = {}
@@ -239,9 +240,39 @@ def compute_clustering_metrics(df):
 				false_count += cl2
 	return float(correct_count) / float(correct_count + false_count)
 
+#computes the mean inter-point distance between every combination of points in the cluster
+def compute_clustering_metrics_distance(df):
+	print(df)
+
+def agglomerative_clustering_mean_distance(dataset_pd,n,cl_size):
+	nb_clusters = int(n*cl_size)
+	df = clustering_feature_space_agglomerative(dataset_pd,nb_clusters=nb_clusters,normalize=False)
+
+	cluster_array = [[] for i in range(nb_clusters)]
+	distance_list = df.loc[:,['Label2','Lat','Lon']].values.tolist()
+	#split for every cluster
+	for point in distance_list:
+		cluster_array[int(point[0])].append(point)
+
+	#evaluate every cluster for the inter-point distance
+	distances = []
+	for cluster in cluster_array:
+		total_sum = 0
+		for p1 in cluster:
+			coords1 = (p1[1],p1[2])
+			for p2 in cluster:
+				coords2 = (p2[1],p2[2])
+				if p1!=p2:
+					total_sum += geopy.distance.vincenty(coords1,coords2).km*1000
+		if len(cluster) > 0:
+			total_sum = total_sum / len(cluster)**2
+		distances.append(total_sum)
+	return (sum(distances)/len(distances),max(distances),min(distances))
+
+
 #Second clustering step, fully integrated and taking into account the optimization metrics
 def agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,**kwargs):
-	cl_size = 1.0
+	cl_size = 2.0
 	step = 0.05
 
 	goal_metrics = 0.96
@@ -253,7 +284,7 @@ def agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,**kwargs):
 	while True:
 		#calculate feature space like done for classification preparation. Is giving two times the same feature space as output. 
 		dataset_2_cl = clustering_feature_space_agglomerative(dataset_pd,nb_clusters=nb_clusters*cl_size,normalize=False)
-		metrics = compute_clustering_metrics(dataset_2_cl)
+		metrics = compute_clustering_metrics_pointfraction(dataset_2_cl)
 
 		print("Cluster size: {} - Metrics: {}".format(cl_size,metrics))
 		#print(".",end=" ",flush=True)

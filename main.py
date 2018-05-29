@@ -192,13 +192,13 @@ mapping.output_map('maps/track20.html')
 '''
 
 
-
+'''
 #4.5.2018 - Clustering
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
 
-#have around 10-30 points per cluster
+#have around 10-30 points per cluster. This is a parameter to optimize
 nb_clusters = int(len(clustering_test_track)/15)
 print("Number of clusters: {}".format(nb_clusters))
 
@@ -218,16 +218,32 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 
 #9.5.2018 - Applying PCA
-#training_set, testi
-ng_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
+#training_set, testing_set = fp.create_dataset_tf(cluster_array,gtws,dataset_size=100,nb_measures=10,train_test=1,offset=0)
 #fp.apply_pca(training_set,nb_clusters,0)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
-dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
+#intermediate storage to avoid recalculating dataset every time
+dataset_pd.to_csv("storage.csv")
 
-mapping.print_map_from_pandas(dataset_2_cl,nb_clusters,'maps/clustering-2nd-agglomerative-95.html')
+'''
+nb_clusters = 231 #from storage
+
+#import pre-computed dataset
+dataset_pd = pd.read_csv("storage.csv")
+
+tab = []
+for i in range(1,10):
+	cl_size = i / 10.0
+	print("Evaluating cluster size {}".format(cl_size))
+	mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
+	tab.append([cl_size,mean_dist,max_dist,min_dist])
+df = pd.DataFrame(data=tab,columns=['Cluster reduction','Mean distance','Biggest cluster','Smallest cluster'])
+print(df.to_string())
+#dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
+
+#mapping.print_map_from_pandas(dataset_2_cl,nb_clusters,'maps/clustering-2nd-agglomerative-95.html')
 
 
 
