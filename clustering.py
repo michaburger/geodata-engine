@@ -141,7 +141,7 @@ def clustering_feature_space_agglomerative(df, **kwargs):
 	else: 
 		data = features
 
-	model = AgglomerativeClustering(n_clusters=nb_clusters,linkage="average")
+	model = AgglomerativeClustering(n_clusters=nb_clusters,linkage="ward")
 	model.fit(data)
 
 	labels = model.fit_predict(data)
