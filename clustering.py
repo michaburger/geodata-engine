@@ -125,7 +125,7 @@ def cluster_split(dataset, nb_clusters, **kwargs):
 #clustering on feature-space, based on pandas dataset as input
 def clustering_feature_space_agglomerative(df, **kwargs):
 	features = df.drop(columns=['Label1','Lat','Lon'])
-
+	print(features)
 	nb_clusters = 10
 	min_points = 20
 	normalize = False
