@@ -290,7 +290,7 @@ def jaccard_classifier(input_track, **kwargs):
 
 def create_dataset(track, **kwargs):
 	'''
-	@summary: Creates a random sample dataset from track data
+	@summary: Creates a random sample dataset from track data. Sets the mean position of every cluster as position.
 	@param track: the input track
 	@kwargs dataset_size: how many points the dataset will contain
 	@kwargs nb_measures: over how many random points a dataset item is generated
@@ -318,6 +318,8 @@ def create_dataset(track, **kwargs):
 		print("WARNING: nb_measures reduced to "+str(nb_measures))
 
 	dataset = []
+	latarr = []
+	lonarr = []
 
 	for i in range (0,dataset_size):
 		random.shuffle(track)
@@ -332,7 +334,17 @@ def create_dataset(track, **kwargs):
 				else:
 					t.update({eui:(track[k]['gateway_esp'][j]+t[eui][0],t[eui][1]+1)})
 					freq_count += 1.0
+			latarr.append(track[k]['gps_lat'])
+			lonarr.append(track[k]['gps_lon'])
 		
+		mean_lat = sum(latarr) / len(latarr)
+		mean_lon = sum(lonarr) / len(lonarr)
+
+		#for display reasons it can be better to display the point at a random position inside the cluster, 
+		#representing the set of all points that are represented by this cluster.
+		random_lat = track[0]['gps_lat']
+		random_lon = track[0]['gps_lon']
+
 		gtw_info = {} #key: eui, values array: [mean, sigma, frequency]
 
 		#calculate the means and frequency
@@ -354,7 +366,7 @@ def create_dataset(track, **kwargs):
 
 		#create dataset. ok always taking the first point of a track, in the end with n=100 all points should be represented
 		#TODO: correct position / size of cluster instead of random point each time.
-		dataset.append({'Track':track[0]['track_ID']-offset,'Position':(track[0]['gps_lat'],track[0]['gps_lon']),'Gateways':gtw_info})
+		dataset.append({'Track':track[0]['track_ID']-offset,'Position':(random_lat,random_lon),'Gateways':gtw_info})
 
 	return dataset
 

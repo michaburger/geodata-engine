@@ -199,7 +199,7 @@ clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
 
 #have around 10-30 points per cluster. This is a parameter to optimize
-nb_clusters = int(len(clustering_test_track)/15)
+nb_clusters = int(len(clustering_test_track)/20)
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
@@ -225,27 +225,49 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 #AGGLOMERATIVE 2ND CLUSTERING
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
 #intermediate storage to avoid recalculating dataset every time
-dataset_pd.to_csv("storage.csv")
+#dataset_pd.to_csv("storage.csv")
 
-'''
-nb_clusters = 231 #from storage
+
 
 #import pre-computed dataset
-dataset_pd = pd.read_csv("storage.csv")
+#nb_clusters = 173 #from storage
+#dataset_pd = pd.read_csv("storage.csv")
+
+
+#test different parameters
+cl_size = 0.8
+ncl = int(nb_clusters*cl_size)
+dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=ncl,normalize=False)
+#dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
+'''
+
+
+#mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative-80.html')
+
+#30.5.2018
+#testing different parameters
+
+clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00")
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00"))
+
+nb_measures = 20
+dataset_size = 100
 
 tab = []
-for i in range(1,10):
-	cl_size = i / 10.0
-	print("Evaluating cluster size {}".format(cl_size))
-	mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
-	tab.append([cl_size,mean_dist,max_dist,min_dist])
-df = pd.DataFrame(data=tab,columns=['Cluster reduction','Mean distance','Biggest cluster','Smallest cluster'])
-print(df.to_string())
-#dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
-
-#mapping.print_map_from_pandas(dataset_2_cl,nb_clusters,'maps/clustering-2nd-agglomerative-95.html')
-
-
+for cluster_points in range(5,50,5):
+	nb_clusters = int(len(clustering_test_track)/cluster_points)
+	#Agglomerative clustering
+	set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=10)
+	cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
+	dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=dataset_size, nb_measures=nb_measures)
+	for c in range(1,11):
+		cl_size = c/10.0
+		ncl = int(nb_clusters*cl_size)
+		print("Evaluating: Cluster size {} - NB measures {} - Dataset size {}".format(cl_size,nb_measures,dataset_size))
+		mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
+		tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
+df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
+df.to_csv('data/cluster-size-eval.csv')
 
 
 '''

@@ -148,7 +148,8 @@ def pick_color_clusters(cluster):
 	else:
 		return color_list[cluster-1]
 
-
+def random_color():
+	return '#'+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))
 
 def pick_color(heat,cluster,color_clusters):
 	if color_clusters:
@@ -224,17 +225,53 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 def print_map_from_pandas(df,nb_cl,path):
 	reduced = df.loc[:,['Lat','Lon','Label2']].values.tolist()
 
-	ftr1 = folium.FeatureGroup(name='Clustering')
+	#seperate list by clusters
+	cluster_array = [[] for i in range(nb_cl)]
+	distance_list = df.loc[:,['Label2','Lat','Lon']].values.tolist()
+	#split for every cluster
+	for point in distance_list:
+		cluster_array[int(point[0])].append(point)
 
-	for point in reduced:
-		if point[2] >= 0:
-			ftr1.add_child(folium.CircleMarker(location=[point[0],point[1]],
-				fill=True,radius=10,color='',
-				popup="Cluster " + str(int(point[2])),
-				fill_color=pick_color_clusters(int(point[2])),
-				fill_opacity=0.7
-				))
-	map.add_child(ftr1)
+	#filter for points which are contours
+	cluster_array_contour = []
+	for cluster in cluster_array:
+		contours = []
+		for p1 in cluster:
+			n = s = e = w = False
+			lat1 = p1[1]
+			lon1 = p1[2]
+			for p2 in cluster:
+				lat2 = p2[1]
+				lon2 = p2[2]
+				if lat2 > lat1:
+					n = True
+				if lat2 < lat1:
+					s = True
+				if lon2 > lon1:
+					e = True
+				if lon2 < lon1:
+					w = True
+			#if there is no other point in one of the directions N,S,E,W, keep it as a contour
+			if (n and s and e and w) == False:
+				contours.append(p1)
+		cluster_array_contour.append(contours)
+
+	#draw every cluster as a polygon
+	#draw polygon around all those points
+
+
+	for idx,cluster in enumerate(cluster_array):
+		ftr1 = folium.FeatureGroup(name='Cluster {}'.format(idx))
+		color = random_color()
+		for point in cluster:
+			if point[0] > -1:
+				ftr1.add_child(folium.CircleMarker(location=[point[1],point[2]],
+					fill=True,radius=10,color='',
+					popup="Cluster " + str(int(point[0])),
+					fill_color=color,
+					fill_opacity=0.7
+					))
+		map.add_child(ftr1)
 	output_map(path)
 	print("Clustering map saved at " + path)
 
