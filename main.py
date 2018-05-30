@@ -263,7 +263,7 @@ for cluster_points in range(5,50,5):
 	for c in range(1,11):
 		cl_size = c/10.0
 		ncl = int(nb_clusters*cl_size)
-		print("Evaluating: Cluster size {} - NB measures {} - Dataset size {}".format(cl_size,nb_measures,dataset_size))
+		print("Evaluating: Cluster reduction {} - NB clusters 1st {}".format(cl_size,nb_clusters))
 		mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
 		tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
