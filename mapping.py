@@ -232,6 +232,7 @@ def print_map_from_pandas(df,nb_cl,path):
 	for point in distance_list:
 		cluster_array[int(point[0])].append(point)
 
+	'''
 	#filter for points which are contours
 	cluster_array_contour = []
 	for cluster in cluster_array:
@@ -255,12 +256,13 @@ def print_map_from_pandas(df,nb_cl,path):
 			if (n and s and e and w) == False:
 				contours.append(p1)
 		cluster_array_contour.append(contours)
-
+	'''
 	#draw every cluster as a polygon
 	#draw polygon around all those points
 
 
 	for idx,cluster in enumerate(cluster_array):
+		print("Drawing cluster {}".format(idx))
 		ftr1 = folium.FeatureGroup(name='Cluster {}'.format(idx))
 		color = random_color()
 		for point in cluster:
