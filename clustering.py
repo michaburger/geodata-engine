@@ -257,16 +257,16 @@ def agglomerative_clustering_mean_distance(dataset_pd,n,cl_size):
 	#evaluate every cluster for the inter-point distance
 	distances = []
 	for cluster in cluster_array:
-		total_sum = 0
+		maximum = 0
 		for p1 in cluster:
 			coords1 = (p1[1],p1[2])
 			for p2 in cluster:
 				coords2 = (p2[1],p2[2])
 				if p1!=p2:
-					total_sum += geopy.distance.vincenty(coords1,coords2).km*1000
-		if len(cluster) > 0:
-			total_sum = total_sum / len(cluster)**2
-		distances.append(total_sum)
+					dist = geopy.distance.vincenty(coords1,coords2).km*1000
+					if dist > maximum:
+						maximum = dist
+		distances.append(maximum)
 	return (sum(distances)/len(distances),max(distances),min(distances))
 
 
