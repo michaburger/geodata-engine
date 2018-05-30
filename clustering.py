@@ -135,8 +135,8 @@ def clustering_feature_space_agglomerative(df, **kwargs):
 	if 'min_points' in kwargs:
 		min_points = int(kwargs['min_points'])
 	if 'normalize' in kwargs:
-		if kwargs['normalize'] == False:
-			normalize = False
+		if kwargs['normalize'] == True:
+			normalize = True
 
 	#normalize feature space for a more appropriate clustering
 	if normalize:
@@ -152,11 +152,13 @@ def clustering_feature_space_agglomerative(df, **kwargs):
 	labels_pd = pd.DataFrame(data=labels,columns=['Label2'])
 	dataset = pd.concat([df,labels_pd],axis=1)
 
+	print("2nd agglomerative clustering done!")
 	return dataset
 
 def clustering_feature_space_dbscan(df, **kwargs):
-	features = df.drop(columns=['Label1'])
+	features = df.drop(columns=['Label1','Lat','Lon'])
 
+	remove_coordinates = True
 	max_unlabeled = 0.05
 	min_samples = 5
 	normalize = False
@@ -169,8 +171,8 @@ def clustering_feature_space_dbscan(df, **kwargs):
 	if 'min_samples' in kwargs:
 		min_samples = kwargs['min_samples']
 	if 'normalize' in kwargs:
-		if kwargs['normalize'] == False:
-			normalize = False
+		if kwargs['normalize'] == True:
+			normalize = True
 
 	if normalize:
 		data = StandardScaler().fit_transform(features)
@@ -178,7 +180,7 @@ def clustering_feature_space_dbscan(df, **kwargs):
 		step = 0.1
 	else:
 		data = features
-		eps  = 120
+		eps  = 150
 		step = 5
 
 	#optimise eps to reach correct fraction of unlabeled points
@@ -247,12 +249,10 @@ def compute_clustering_metrics_pointfraction(df):
 def compute_clustering_metrics_distance(df):
 	print(df)
 
-def agglomerative_clustering_mean_distance(dataset_pd,n,cl_size):
-	nb_clusters = int(n*cl_size)
-	df = clustering_feature_space_agglomerative(dataset_pd,nb_clusters=nb_clusters,normalize=False)
-
+def mean_distance_metrics(df,nb_clusters):
 	cluster_array = [[] for i in range(nb_clusters)]
 	distance_list = df.loc[:,['Label2','Lat','Lon']].values.tolist()
+	
 	#split for every cluster
 	for point in distance_list:
 		cluster_array[int(point[0])].append(point)
@@ -260,16 +260,16 @@ def agglomerative_clustering_mean_distance(dataset_pd,n,cl_size):
 	#evaluate every cluster for the inter-point distance
 	distances = []
 	for cluster in cluster_array:
-		total_sum = 0
+		max_distance = 0
 		for p1 in cluster:
 			coords1 = (p1[1],p1[2])
 			for p2 in cluster:
 				coords2 = (p2[1],p2[2])
 				if p1!=p2:
-					total_sum += geopy.distance.vincenty(coords1,coords2).km*1000
-		if len(cluster) > 0:
-			total_sum = total_sum / len(cluster)**2
-		distances.append(total_sum)
+					dist = geopy.distance.vincenty(coords1,coords2).km*1000 
+					if dist > max_distance:
+						max_distance = dist
+		distances.append(max_distance)
 	return (sum(distances)/len(distances),max(distances),min(distances))
 
 
