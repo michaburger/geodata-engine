@@ -192,7 +192,7 @@ mapping.output_map('maps/track20.html')
 '''
 
 
-
+'''
 #4.5.2018 - Clustering
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 
@@ -226,12 +226,12 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
 #intermediate storage to avoid recalculating dataset every time
 #dataset_pd.to_csv("storage.csv")
-
+'''
 
 
 #import pre-computed dataset
-#nb_clusters = 173 #from storage
-#dataset_pd = pd.read_csv("storage.csv")
+nb_clusters = 173 #from storage
+dataset_pd = pd.read_csv("storage.csv")
 
 
 #test different parameters
@@ -240,11 +240,12 @@ ncl = int(nb_clusters*cl_size)
 dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=ncl,normalize=False)
 #dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
 
-mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative-revamp.html')
+mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative_linkage_average.html')
 
+'''
 #30.5.2018
 #testing different parameters
-'''
+
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00")
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00"))
 
@@ -266,7 +267,9 @@ for cluster_points in range(5,50,5):
 		tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
 df.to_csv('data/cluster-size-eval.csv')
+
 '''
+
 
 '''
 #****************************
