@@ -127,10 +127,13 @@ def clustering_feature_space_agglomerative(df, **kwargs):
 	features = df.drop(columns=['Label1','Lat','Lon'])
 
 	nb_clusters = 10
-	normalize = True
+	min_points = 20
+	normalize = False
 
 	if 'nb_clusters' in kwargs:
 		nb_clusters = int(kwargs['nb_clusters'])
+	if 'min_points' in kwargs:
+		min_points = int(kwargs['min_points'])
 	if 'normalize' in kwargs:
 		if kwargs['normalize'] == False:
 			normalize = False
@@ -152,11 +155,11 @@ def clustering_feature_space_agglomerative(df, **kwargs):
 	return dataset
 
 def clustering_feature_space_dbscan(df, **kwargs):
-	features = df.drop(columns=['Label1','Lat','Lon'])
+	features = df.drop(columns=['Label1'])
 
 	max_unlabeled = 0.05
 	min_samples = 5
-	normalize = True
+	normalize = False
 
 	#initialization for while loop and standard parameter
 	unlabeled = 1.0

@@ -192,11 +192,11 @@ mapping.output_map('maps/track20.html')
 '''
 
 
-
+'''
 #4.5.2018 - Clustering
-clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
+clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00")
 
-gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00"))
 
 #have around 10-30 points per cluster. This is a parameter to optimize
 nb_clusters = int(len(clustering_test_track)/20)
@@ -225,20 +225,22 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 #AGGLOMERATIVE 2ND CLUSTERING
 dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
 #intermediate storage to avoid recalculating dataset every time
-#dataset_pd.to_csv("storage.csv")
-
+dataset_pd.to_csv("storage.csv")
+'''
 
 
 #import pre-computed dataset
-#nb_clusters = 173 #from storage
-#dataset_pd = pd.read_csv("storage.csv")
+nb_clusters = 173 #from storage
+dataset_pd = pd.read_csv("storage.csv")
 
 
 #test different parameters
-cl_size = 0.8
-ncl = int(nb_clusters*cl_size)
-dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=ncl,normalize=False)
-#dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
+#cl_size = 0.8
+#ncl = int(nb_clusters*cl_size)
+#dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=ncl,normalize=False)
+
+#DBSCAN
+dataset_2_cl, ncl = cl.clustering_feature_space_dbscan(dataset_pd)
 
 
 mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative.html')
