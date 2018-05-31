@@ -199,7 +199,7 @@ clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
 
 #have around 10-30 points per cluster. This is a parameter to optimize
-nb_clusters = int(len(clustering_test_track)/20)
+nb_clusters = int(len(clustering_test_track)/30)
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
@@ -223,15 +223,15 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
-dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=20, nb_measures=20)
+dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=30, nb_measures=10)
 #intermediate storage to avoid recalculating dataset every time
 dataset_pd.to_csv("storage.csv")
 
 
 
 #import pre-computed dataset
-nb_clusters = 173 #from storage
-dataset_pd = pd.read_csv("storage.csv")
+#nb_clusters = 173 #from storage
+#dataset_pd = pd.read_csv("storage.csv")
 
 
 #test different parameters
@@ -251,22 +251,23 @@ clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00",
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00"))
 
 nb_measures = 20
-dataset_size = 20
+dataset_size = 30
 
 tab = []
-for cluster_points in range(5,20,5):
-	nb_clusters = int(len(clustering_test_track)/cluster_points)
-	#Agglomerative clustering
-	set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=10)
-	cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
-	dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=dataset_size, nb_measures=nb_measures)
-	for c in range(1,11):
-		cl_size = c/10.0
-		ncl = int(nb_clusters*cl_size)
-		print("Evaluating: Cluster reduction {} - NB clusters 1st {}".format(cl_size,nb_clusters))
-		mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
-		print("Mean distance {} - Max {} - Min {}".format(mean_dist,max_dist,min_dist))
-		tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
+for nb_measures in range(6,21,3):
+	for cluster_points in range(5,50,5):
+		nb_clusters = int(len(clustering_test_track)/cluster_points)
+		#Agglomerative clustering
+		set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=10)
+		cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
+		dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=dataset_size, nb_measures=nb_measures)
+		for c in range(1,11):
+			cl_size = c/10.0
+			ncl = int(nb_clusters*cl_size)
+			print("Evaluating: Cluster reduction {} - NB clusters 1st {}".format(cl_size,nb_clusters))
+			mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
+			print("Mean distance {} - Max {} - Min {}".format(mean_dist,max_dist,min_dist))
+			tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
 df.to_csv('data/cluster-size-eval.csv')
 
