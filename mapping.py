@@ -228,6 +228,7 @@ def print_map_from_pandas(df,nb_cl,path):
 	#seperate list by clusters
 	cluster_array = [[] for i in range(nb_cl)]
 	distance_list = df.loc[:,['Label2','Lat','Lon']].values.tolist()
+	
 	#split for every cluster
 	for point in distance_list:
 		cluster_array[int(point[0])].append(point)

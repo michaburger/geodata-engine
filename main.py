@@ -223,10 +223,10 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
-dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=100, nb_measures=20)
+dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=20, nb_measures=20)
 #intermediate storage to avoid recalculating dataset every time
-#dataset_pd.to_csv("storage.csv")
-'''
+dataset_pd.to_csv("storage.csv")
+
 
 
 #import pre-computed dataset
@@ -235,14 +235,15 @@ dataset_pd = pd.read_csv("storage.csv")
 
 
 #test different parameters
-cl_size = 0.8
+cl_size = 0.5
 ncl = int(nb_clusters*cl_size)
 dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=ncl,normalize=False)
 #dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
 
-mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative_linkage_average.html')
-
+mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative.html')
 '''
+
+
 #30.5.2018
 #testing different parameters
 
@@ -250,10 +251,10 @@ clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00",
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-30_00:00:00"))
 
 nb_measures = 20
-dataset_size = 100
+dataset_size = 20
 
 tab = []
-for cluster_points in range(5,50,5):
+for cluster_points in range(5,20,5):
 	nb_clusters = int(len(clustering_test_track)/cluster_points)
 	#Agglomerative clustering
 	set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=10)
@@ -264,11 +265,12 @@ for cluster_points in range(5,50,5):
 		ncl = int(nb_clusters*cl_size)
 		print("Evaluating: Cluster reduction {} - NB clusters 1st {}".format(cl_size,nb_clusters))
 		mean_dist, max_dist, min_dist = cl.agglomerative_clustering_mean_distance(dataset_pd,nb_clusters,cl_size)
+		print("Mean distance {} - Max {} - Min {}".format(mean_dist,max_dist,min_dist))
 		tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
 df.to_csv('data/cluster-size-eval.csv')
 
-'''
+
 
 
 '''
