@@ -427,7 +427,64 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1, n_dataset, n_meas, activation,layers):
+def neuronal_classification_clusters(clusters_training, clusters_validation, nb_clusters, nb_gateways):
+	#prepare data
+	training_labels = clusters_training.loc[:,['Label1']]
+	validation_labels = clusters_validation.loc[:,['Label1']]
+	training_data = clusters_training.drop(columns=['Label1','Lat','Lon','Label2'])
+	validation_data = clusters_validation.drop(columns=['Label1','Lat','Lon','Label2'])
+
+	#Enable GPU
+	config = tf.ConfigProto()
+	config.gpu_options.allow_growth = True
+	session = tf.Session(config=config)
+
+	training_set = (np.array(training_data),np.array(training_labels))
+	validation_set = (np.array(validation_data),np.array(validation_labels))
+
+	# Convert labels to categorical one-hot encoding
+	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_clusters)
+	one_hot_labels_test = tf.keras.utils.to_categorical(validation_set[1], num_classes=nb_clusters)
+
+	layers = 2
+
+	#Creating the NN model with Keras
+	model = tf.keras.Sequential()
+	model.add(tf.keras.layers.Dense(64, activation="relu", input_shape=(training_set[0].shape[1],)))
+	for i in range(layers):
+		model.add(tf.keras.layers.Dropout(0.6))
+		model.add(tf.keras.layers.Dense(64, activation="relu"))
+	model.add(tf.keras.layers.Flatten())
+	model.add(tf.keras.layers.Dense(nb_clusters, activation="softmax"))
+
+	model.compile(
+		#for a multi-class classification problem
+		optimizer = "rmsprop",
+		loss = "categorical_crossentropy",
+		metrics = ["accuracy"]
+	)
+
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(time()))
+
+
+	results = model.fit(
+		training_set[0], one_hot_labels_train,
+		epochs=16,
+		batch_size=8,
+		validation_data=(validation_set[0],one_hot_labels_test),
+		callbacks=[tensorboard],
+		verbose=2
+		)
+
+	prediction = model.predict(validation_set[0])
+	print("Prediction of the model:")
+	print(prediction)	
+
+	#print(results.history["acc"])
+	#print(results.history["val_acc"])
+
+
+def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1, n_dataset, n_meas, activation, layers):
 
 	#Enable GPU
 	config = tf.ConfigProto()
@@ -480,5 +537,5 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		callbacks=[tensorboard],
 		verbose=2
 		)	
-	#return mean over the last 4 epochs
+	#return mean over the last 10 epochs
 	return np.mean(results.history["acc"][epochs-10:]), np.mean(results.history["val_acc"][epochs-10:])

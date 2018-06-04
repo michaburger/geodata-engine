@@ -2,7 +2,7 @@ import json
 import folium
 from folium.plugins import HeatMap
 import numpy as np
-import pandas
+import pandas as pd
 import geometry as geo
 import random
 

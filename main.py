@@ -197,6 +197,7 @@ mapping.output_map('maps/track20.html')
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
+nb_gtws = len(gtws)
 
 #have around 10-30 points per cluster. This is a parameter to optimize
 nb_clusters = int(len(clustering_test_track)/30)
@@ -223,20 +224,32 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
-training_set, validation_set = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=50, nb_measures=9)
+training_set, validation_set = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=500, nb_measures=12)
 #intermediate storage to avoid recalculating dataset every time
 training_set.to_csv("storage-training.csv")
 validation_set.to_csv("storage-validation.csv")
-writefile = open("clsize.mikka","w")
-writefile.write(str(nb_clusters))
-writefile.close()
+cfile = open("clsize.mikka","w")
+cfile.write(str(nb_clusters))
+cfile.close()
+gfile = open("gtwnb.mikka","w")
+gfile.write(str(nb_gtws))
+gfile.close()
+
+
+
+
 
 #import pre-computed dataset
 training_set = pd.read_csv("storage-training.csv")
 validation_set = pd.read_csv("storage-validation.csv")
-readfile = open("clsize.mikka","r")
-nb_clusters = int(readfile.read())
-print(nb_clusters)
+cfile = open("clsize.mikka","r")
+nb_clusters = int(cfile.read())
+cfile.close()
+gfile = open("gtwnb.mikka","r")
+nb_gtws = int(gfile.read())
+gfile.close()
+
+
 #norm both sets the same way
 training_set_norm, validation_set_norm = cl.normalize_data(training_set,validation_set)
 
@@ -246,9 +259,12 @@ ncl = int(nb_clusters*cl_size)
 clusters_training = cl.clustering_feature_space_agglomerative(training_set_norm,nb_clusters=ncl)
 clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
 
-#mapping.print_map_from_pandas(clusters_training,ncl,'maps/clustering-2nd-agglomerative-raw.html')
-mapping.print_map_from_pandas(clusters_validation,ncl,'maps/clustering-2nd-agglomerative-stdnorm.html')
+#Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 
+#mapping.print_map_from_pandas(clusters_training,ncl,'maps/clustering-2nd-agglomerative-raw.html')
+#mapping.print_map_from_pandas(clusters_validation,ncl,'maps/clustering-2nd-agglomerative-stdnorm.html')
+
+fp.neuronal_classification_clusters(clusters_training,clusters_validation,nb_clusters)
 
 '''
 #30.5.2018
