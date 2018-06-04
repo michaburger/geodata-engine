@@ -97,7 +97,7 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 	#Set default values
 	dataset_size = 20 # per track!
 	nb_measures = 10
-	train_test = 1
+	train_test = 0.5
 	offset = 0
 
 	if 'dataset_size' in kwargs:
@@ -146,7 +146,6 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 		#create random order
 		df_train = df_train.sample(frac=1).reset_index(drop=True)
 
-		#theoretically returning a testing set could be removed from this function as I will do the split later.
 		if train_test != 1:
 			for p in trk_dict_test:
 				tensor = []

@@ -192,7 +192,7 @@ mapping.output_map('maps/track20.html')
 '''
 
 
-'''
+
 #4.5.2018 - Clustering
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 
@@ -203,7 +203,7 @@ nb_clusters = int(len(clustering_test_track)/30)
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
-set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=10)
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=20)
 
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
@@ -223,27 +223,34 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
-dataset_pd, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=30, nb_measures=10)
+training_set, validation_set = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=50, nb_measures=9)
 #intermediate storage to avoid recalculating dataset every time
-dataset_pd.to_csv("storage.csv")
-
-
+training_set.to_csv("storage-training.csv")
+validation_set.to_csv("storage-validation.csv")
+writefile = open("clsize.mikka","w")
+writefile.write(str(nb_clusters))
+writefile.close()
 
 #import pre-computed dataset
-#nb_clusters = 173 #from storage
-#dataset_pd = pd.read_csv("storage.csv")
-
+training_set = pd.read_csv("storage-training.csv")
+validation_set = pd.read_csv("storage-validation.csv")
+readfile = open("clsize.mikka","r")
+nb_clusters = int(readfile.read())
+print(nb_clusters)
+#norm both sets the same way
+training_set_norm, validation_set_norm = cl.normalize_data(training_set,validation_set)
 
 #test different parameters
-cl_size = 0.5
+cl_size = 1.0
 ncl = int(nb_clusters*cl_size)
-dataset_2_cl = cl.clustering_feature_space_agglomerative(dataset_pd,nb_clusters=ncl,normalize=False)
-#dataset_2_cl = cl.agglomerative_clustering_with_metrics(dataset_pd,nb_clusters,metrics=0.95)
+clusters_training = cl.clustering_feature_space_agglomerative(training_set_norm,nb_clusters=ncl)
+clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
 
-mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative.html')
+#mapping.print_map_from_pandas(clusters_training,ncl,'maps/clustering-2nd-agglomerative-raw.html')
+mapping.print_map_from_pandas(clusters_validation,ncl,'maps/clustering-2nd-agglomerative-stdnorm.html')
+
+
 '''
-
-
 #30.5.2018
 #testing different parameters
 
@@ -270,7 +277,7 @@ for nb_measures in range(6,21,3):
 			tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
 df.to_csv('data/cluster-size-eval.csv')
-
+'''
 
 
 

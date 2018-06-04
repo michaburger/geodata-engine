@@ -122,18 +122,43 @@ def cluster_split(dataset, nb_clusters, **kwargs):
 			cluster_array[cluster_id].append(point)
 	return cluster_array
 
+#normalize entire dataset (testing and training) using standardscaler
+#fit data for 1st dataset, then transform both and send it back
+def normalize_data(df1, df2):
+	data1 = df1.drop(columns=['Label1','Lat','Lon'])
+	data2 = df2.drop(columns=['Label1','Lat','Lon'])
+	all_data = pd.concat([data1,data2])
+
+	#apply standardscaler on all data
+	scaler = StandardScaler()
+	transformed = scaler.fit(all_data)
+
+	d1_trf = scaler.transform(data1)
+	d2_trf = scaler.transform(data2)
+
+	columns=['C{}'.format(i) for i in range(d1_trf.shape[1])]
+	d1_pd = pd.DataFrame(data=d1_trf,columns=columns)
+	d2_pd = pd.DataFrame(data=d2_trf,columns=columns)
+
+	#add label and coordinates again
+	d1_all = pd.concat([d1_pd,df1.loc[:,['Label1','Lat','Lon']]],axis=1)
+	d2_all = pd.concat([d2_pd,df2.loc[:,['Label1','Lat','Lon']]],axis=1)
+
+	return d1_all, d2_all
+
+
 #clustering on feature-space, based on pandas dataset as input
 def clustering_feature_space_agglomerative(df, **kwargs):
 	features = df.drop(columns=['Label1','Lat','Lon'])
 
 	nb_clusters = 10
-	normalize = True
+	normalize = False
 
 	if 'nb_clusters' in kwargs:
 		nb_clusters = int(kwargs['nb_clusters'])
 	if 'normalize' in kwargs:
-		if kwargs['normalize'] == False:
-			normalize = False
+		if kwargs['normalize'] == True:
+			normalize = True
 
 	#normalize feature space for a more appropriate clustering
 	if normalize:
