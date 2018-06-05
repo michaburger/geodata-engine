@@ -296,7 +296,7 @@ for nb_measures in range(6,21,3):
 			tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
 df.to_csv('data/cluster-size-eval.csv')
-
+'''
 
 
 
