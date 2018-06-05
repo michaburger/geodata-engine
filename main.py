@@ -192,8 +192,12 @@ mapping.output_map('maps/track20.html')
 '''
 
 
-'''
+
 #4.5.2018 - Clustering
+
+#parameters
+D_SIZE = 25
+N_MEAS = 12
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 
 #only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
@@ -201,7 +205,7 @@ gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00
 nb_gtws = len(gtws)
 
 #have around 10-30 points per cluster. This is a parameter to optimize
-nb_clusters = int(len(clustering_test_track)/30)
+nb_clusters = int(len(clustering_test_track)/100)
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
@@ -225,7 +229,7 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
-training_set, validation_set = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=500, nb_measures=12)
+training_set, validation_set = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=D_SIZE, nb_measures=N_MEAS)
 #intermediate storage to avoid recalculating dataset every time
 training_set.to_csv("storage-training.csv")
 validation_set.to_csv("storage-validation.csv")
@@ -235,7 +239,7 @@ cfile.close()
 gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
-'''
+
 
 
 #import pre-computed dataset
@@ -261,12 +265,22 @@ print("Training set done")
 clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
 print("Validation set done")
 
-clusters_training.to_csv("/data/clusters_training-100-12.csv")
-clusters_validation.to_csv("/data/clusters_validation-100-12.csv")
+clusters_training.to_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
+clusters_validation.to_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
 
 
-clusters_training = pd.read_csv("/data/clusters_training-100-12.csv")
-clusters_validation = pd.read_csv("/data/clusters_validation-100-12.csv")
+#parameters
+#D_SIZE = 10
+#N_MEAS = 12
+#cl_size = 1.0
+
+clusters_training = pd.read_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
+clusters_validation = pd.read_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
+cfile = open("clsize.mikka","r")
+nb_clusters = int(cfile.read())
+cfile.close()
+print("NB clusters: {}".format(nb_clusters))
+
 
 #Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 

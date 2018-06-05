@@ -141,7 +141,7 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 					for i in range(3):
 						tensor.append(0)
 			tensor_pd = pd.DataFrame(data=[tensor], columns=['C{}'.format(i) for i in range(1,len(tensor)+1)])
-			info_pd = pd.DataFrame(data=[[p['Track'],p['Position'][0],p['Position'][1]]],columns=['Label1','Lat','Lon'])
+			info_pd = pd.DataFrame(data=[[p['Track'],p['Position'][0],p['Position'][1],p['Center'][0],p['Center'][1]]],columns=['Label1','rLat','rLon','cLat','cLon'])
 			df_train= pd.concat([df_train,pd.concat([tensor_pd,info_pd],axis=1)])
 		#create random order
 		df_train = df_train.sample(frac=1).reset_index(drop=True)
@@ -158,7 +158,7 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 						for i in range(3):
 							tensor.append(0)
 				tensor_pd = pd.DataFrame(data=[tensor], columns=['C{}'.format(i) for i in range(1,len(tensor)+1)])
-				info_pd = pd.DataFrame(data=[[p['Track'],p['Position'][0],p['Position'][1]]],columns=['Label1','Lat','Lon'])
+				info_pd = pd.DataFrame(data=[[p['Track'],p['Position'][0],p['Position'][1],p['Center'][0],p['Center'][1]]],columns=['Label1','rLat','rLon','cLat','cLon'])
 				df_test= pd.concat([df_test,pd.concat([tensor_pd,info_pd],axis=1)])
 			#create random order
 			df_test = df_test.sample(frac=1).reset_index(drop=True)
@@ -365,7 +365,7 @@ def create_dataset(track, **kwargs):
 
 		#create dataset. ok always taking the first point of a track, in the end with n=100 all points should be represented
 		#TODO: correct position / size of cluster instead of random point each time.
-		dataset.append({'Track':track[0]['track_ID']-offset,'Position':(random_lat,random_lon),'Gateways':gtw_info})
+		dataset.append({'Track':track[0]['track_ID']-offset,'Position':(random_lat,random_lon),'Center':(mean_lat,mean_lon),'Gateways':gtw_info})
 
 	return dataset
 
@@ -431,8 +431,8 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 	#prepare data
 	training_labels = clusters_training.loc[:,['Label1']]
 	validation_labels = clusters_validation.loc[:,['Label1']]
-	training_data = clusters_training.drop(columns=['Label1','Lat','Lon','Label2'])
-	validation_data = clusters_validation.drop(columns=['Label1','Lat','Lon','Label2'])
+	training_data = clusters_training.drop(columns=['Label1','cLat','cLon','rLat','rLon','Label2'])
+	validation_data = clusters_validation.drop(columns=['Label1','cLat','cLon','rLat','rLon','Label2'])
 
 	#Enable GPU
 	config = tf.ConfigProto()
@@ -446,14 +446,18 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_clusters)
 	one_hot_labels_test = tf.keras.utils.to_categorical(validation_set[1], num_classes=nb_clusters)
 
-	layers = 2
+	layers = 0
+	neurons1 = 128
+	neurons_n = 64
+	dropout = 0.1
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential()
-	model.add(tf.keras.layers.Dense(64, activation="relu", input_shape=(training_set[0].shape[1],)))
+	model.add(tf.keras.layers.Dense(neurons1, activation="relu", input_shape=(training_set[0].shape[1],)))
+	model.add(tf.keras.layers.Dropout(dropout))
 	for i in range(layers):
-		model.add(tf.keras.layers.Dropout(0.6))
-		model.add(tf.keras.layers.Dense(64, activation="relu"))
+		model.add(tf.keras.layers.Dense(neurons_n, activation="relu"))
+		model.add(tf.keras.layers.Dropout(dropout))
 	model.add(tf.keras.layers.Flatten())
 	model.add(tf.keras.layers.Dense(nb_clusters, activation="softmax"))
 
@@ -464,20 +468,26 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 		metrics = ["accuracy"]
 	)
 
-	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(time()))
+	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/lay-{}-n1-{}-nn-{}-drp{}-{}".format(layers+1,neurons1,neurons_n,dropout,time()))
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
-		epochs=16,
-		batch_size=8,
+		epochs=180,
+		batch_size=64,
 		validation_data=(validation_set[0],one_hot_labels_test),
 		callbacks=[tensorboard],
 		verbose=2
 		)
 
-	prediction = model.predict(validation_set[0][0])
-	print("Prediction of the model:")
-	print(prediction)	
+	prediction = model.predict(validation_set[0][0:10])
+	#sort and show 10 most probable clusters with probability
+
+	for i, cl_prb in enumerate(prediction):
+		c = pd.DataFrame(data=cl_prb,columns=['P'])
+		c.sort_values(by=['P'], inplace = True, ascending=False)
+		print("Probabilities of the model:")
+		print(c.head(20))
+		print("Real label: {}".format(validation_set[1][i][0]))
 
 	#print(results.history["acc"])
 	#print(results.history["val_acc"])
