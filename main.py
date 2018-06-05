@@ -192,11 +192,12 @@ mapping.output_map('maps/track20.html')
 '''
 
 
-
+'''
 #4.5.2018 - Clustering
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 
-gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00"))
+#only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
 nb_gtws = len(gtws)
 
 #have around 10-30 points per cluster. This is a parameter to optimize
@@ -234,9 +235,7 @@ cfile.close()
 gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
-
-
-
+'''
 
 
 #import pre-computed dataset
@@ -252,12 +251,15 @@ gfile.close()
 
 #norm both sets the same way
 training_set_norm, validation_set_norm = cl.normalize_data(training_set,validation_set)
+print("Data normalized")
 
 #test different parameters
 cl_size = 1.0
 ncl = int(nb_clusters*cl_size)
 clusters_training = cl.clustering_feature_space_agglomerative(training_set_norm,nb_clusters=ncl)
+print("Training set done")
 clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
+print("Validation set done")
 
 #Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 

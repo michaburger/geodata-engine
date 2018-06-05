@@ -427,7 +427,7 @@ def get_gateways(track_array):
 					gtws.append(gtw)
 	return gtws
 
-def neuronal_classification_clusters(clusters_training, clusters_validation, nb_clusters, nb_gateways):
+def neuronal_classification_clusters(clusters_training, clusters_validation, nb_clusters):
 	#prepare data
 	training_labels = clusters_training.loc[:,['Label1']]
 	validation_labels = clusters_validation.loc[:,['Label1']]
@@ -466,7 +466,6 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 
 	tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(time()))
 
-
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
 		epochs=16,
@@ -476,7 +475,7 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 		verbose=2
 		)
 
-	prediction = model.predict(validation_set[0])
+	prediction = model.predict(validation_set[0][0])
 	print("Prediction of the model:")
 	print(prediction)	
 
