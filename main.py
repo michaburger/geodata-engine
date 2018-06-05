@@ -261,12 +261,12 @@ print("Training set done")
 clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
 print("Validation set done")
 
-clusters_training.to_csv("clusters_training-100-12.csv")
-clusters_validation.to_csv("clusters_validation-100-12.csv")
+clusters_training.to_csv("/data/clusters_training-100-12.csv")
+clusters_validation.to_csv("/data/clusters_validation-100-12.csv")
 
 
-clusters_training = pd.read_csv("clusters_training-100-12.csv")
-clusters_validation = pd.read_csv("clusters_validation-100-12.csv")
+clusters_training = pd.read_csv("/data/clusters_training-100-12.csv")
+clusters_validation = pd.read_csv("/data/clusters_validation-100-12.csv")
 
 #Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 
