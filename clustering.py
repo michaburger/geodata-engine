@@ -167,7 +167,7 @@ def clustering_feature_space_agglomerative(df, **kwargs):
 		data = features
 
 	model = AgglomerativeClustering(n_clusters=nb_clusters,linkage="ward")
-	model.fit(data)
+	#model.fit(data)
 
 	labels = model.fit_predict(data)
 
