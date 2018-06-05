@@ -263,11 +263,15 @@ print("Validation set done")
 
 #Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 
+<<<<<<< HEAD
 #mapping.print_map_from_pandas(clusters_training,ncl,'maps/clustering-2nd-agglomerative-raw.html')
 #mapping.print_map_from_pandas(clusters_validation,ncl,'maps/clustering-2nd-agglomerative-stdnorm.html')
 
 fp.neuronal_classification_clusters(clusters_training,clusters_validation,nb_clusters)
 
+=======
+mapping.print_map_from_pandas(dataset_2_cl,ncl,'maps/clustering-2nd-agglomerative-revamp.html')
+>>>>>>> c9f7e9050dbdd670da287cd398f9dc8f2e73827d
 '''
 #30.5.2018
 #testing different parameters
@@ -295,7 +299,7 @@ for nb_measures in range(6,21,3):
 			tab.append([cl_size,nb_clusters,ncl,nb_measures,dataset_size,mean_dist,max_dist,min_dist])
 df = pd.DataFrame(data=tab,columns=['Cluster reduction','NB clusters 1st','NB clusters 2nd','NB measures','Dataset size','Mean distance','Biggest cluster','Smallest cluster'])
 df.to_csv('data/cluster-size-eval.csv')
-'''
+
 
 
 
