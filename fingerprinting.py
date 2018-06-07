@@ -8,6 +8,7 @@ import json
 import os
 import database as db
 import matplotlib.pyplot as plt 
+import geopy.distance
 from time import time
 import sys
 from operator import itemgetter, attrgetter
@@ -446,10 +447,10 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 	one_hot_labels_train = tf.keras.utils.to_categorical(training_set[1], num_classes=nb_clusters)
 	one_hot_labels_test = tf.keras.utils.to_categorical(validation_set[1], num_classes=nb_clusters)
 
-	layers = 0
-	neurons1 = 128
-	neurons_n = 64
-	dropout = 0.1
+	layers = 1
+	neurons1 = 16
+	neurons_n = 32
+	dropout = 0.2
 
 	#Creating the NN model with Keras
 	model = tf.keras.Sequential()
@@ -458,6 +459,8 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 	for i in range(layers):
 		model.add(tf.keras.layers.Dense(neurons_n, activation="relu"))
 		model.add(tf.keras.layers.Dropout(dropout))
+	model.add(tf.keras.layers.Dense(neurons_n*2, activation="relu"))
+	model.add(tf.keras.layers.Dropout(dropout))
 	model.add(tf.keras.layers.Flatten())
 	model.add(tf.keras.layers.Dense(nb_clusters, activation="softmax"))
 
@@ -465,6 +468,7 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 		#for a multi-class classification problem
 		optimizer = "rmsprop",
 		loss = "categorical_crossentropy",
+		#loss = tf.nn.softmax_cross_entropy_with_logits_v2,
 		metrics = ["accuracy"]
 	)
 
@@ -472,22 +476,40 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 
 	results = model.fit(
 		training_set[0], one_hot_labels_train,
-		epochs=180,
-		batch_size=64,
+		epochs=128,
+		batch_size=8,
 		validation_data=(validation_set[0],one_hot_labels_test),
 		callbacks=[tensorboard],
 		verbose=2
 		)
 
-	prediction = model.predict(validation_set[0][0:10])
+	prediction = model.predict(validation_set[0][0:50])
 	#sort and show 10 most probable clusters with probability
 
+	LIST_HEAD_MEAN = 3
+	dist_errors = []
 	for i, cl_prb in enumerate(prediction):
 		c = pd.DataFrame(data=cl_prb,columns=['P'])
 		c.sort_values(by=['P'], inplace = True, ascending=False)
 		print("Probabilities of the model:")
 		print(c.head(20))
-		print("Real label: {}".format(validation_set[1][i][0]))
+		real_cluster_nb = int(validation_set[1][i][0])
+		print("Real label: {}".format(real_cluster_nb))
+		#mean coords of the cluster
+		ref_coords = (float(clusters_validation.loc[real_cluster_nb,['cLat']]), float(clusters_validation.loc[real_cluster_nb,['cLon']]))
+		index_list = c.index.tolist()
+		lat = []
+		lon = []
+		dist_m = []
+		for index in index_list[:LIST_HEAD_MEAN]:
+			lat.append(float(clusters_validation.loc[index,['cLat']]))
+			lon.append(float(clusters_validation.loc[index,['cLon']]))
+			dist_m.append(geopy.distance.vincenty(ref_coords,(float(clusters_validation.loc[index,['cLat']]),float(clusters_validation.loc[index,['cLon']]))).km*1000)
+		print(dist_m)
+		print(np.mean(dist_m))
+		dist_errors.append(geopy.distance.vincenty(ref_coords,(np.mean(lat),np.mean(lon))).km*1000)
+	print(dist_errors)
+	print(np.mean(dist_errors))
 
 	#print(results.history["acc"])
 	#print(results.history["val_acc"])

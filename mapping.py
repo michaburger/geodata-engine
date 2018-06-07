@@ -223,11 +223,11 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 	print("Map: "+layerName+" rendered!")
 
 def print_map_from_pandas(df,nb_cl,path):
-	reduced = df.loc[:,['Lat','Lon','Label2']].values.tolist()
+	reduced = df.loc[:,['rLat','rLon','Label2']].values.tolist()
 
 	#seperate list by clusters
 	cluster_array = [[] for i in range(nb_cl)]
-	distance_list = df.loc[:,['Label2','Lat','Lon']].values.tolist()
+	distance_list = df.loc[:,['Label2','rLat','rLon']].values.tolist()
 	
 	#split for every cluster
 	for point in distance_list:

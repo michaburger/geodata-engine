@@ -196,20 +196,23 @@ mapping.output_map('maps/track20.html')
 #4.5.2018 - Clustering
 
 #parameters
-D_SIZE = 25
+D_SIZE = 50
 N_MEAS = 12
-clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
+CL_SIZE = 0.6
+CLUSTERS_MULTIPLIER = 2.1 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 
+'''
+clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 #only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
 nb_gtws = len(gtws)
 
 #have around 10-30 points per cluster. This is a parameter to optimize
-nb_clusters = int(len(clustering_test_track)/100)
+nb_clusters = int(len(clustering_test_track)/int(CLUSTERS_MULTIPLIER*N_MEAS*2))
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
-set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=20)
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=N_MEAS*2)
 
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
@@ -258,24 +261,19 @@ training_set_norm, validation_set_norm = cl.normalize_data(training_set,validati
 print("Data normalized")
 
 #test different parameters
-cl_size = 1.0
-ncl = int(nb_clusters*cl_size)
+ncl = int(nb_clusters*CL_SIZE)
 clusters_training = cl.clustering_feature_space_agglomerative(training_set_norm,nb_clusters=ncl)
 print("Training set done")
 clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
 print("Validation set done")
 
-clusters_training.to_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
-clusters_validation.to_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
+clusters_training.to_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
+clusters_validation.to_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
 
+'''
 
-#parameters
-#D_SIZE = 10
-#N_MEAS = 12
-#cl_size = 1.0
-
-clusters_training = pd.read_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
-clusters_validation = pd.read_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(cl_size*100)))
+clusters_training = pd.read_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
+clusters_validation = pd.read_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
 cfile = open("clsize.mikka","r")
 nb_clusters = int(cfile.read())
 cfile.close()
