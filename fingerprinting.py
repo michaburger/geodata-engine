@@ -262,7 +262,7 @@ def cosine_similarity_classifier(db, **kwargs):
 	metrics = kwargs['metrics']
 
 	db = db.drop(columns=['cLat','cLon','rLat','rLon','Label1' if metrics == 'Label2' else 'Label2'])
-	db.sort_values(by=metrics)
+	db.sort_values(by=[metrics])
 	print(db)
 
 
