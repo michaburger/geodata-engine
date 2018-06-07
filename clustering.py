@@ -122,6 +122,16 @@ def cluster_split(dataset, nb_clusters, **kwargs):
 			cluster_array[cluster_id].append(point)
 	return cluster_array
 
+def normalize_data_one(df1):
+	data = df1.drop(columns=['Label1','cLat','cLon','rLat','rLon'])
+
+	trf = StandardScaler().fit_transform(data)
+	columns=['C{}'.format(i) for i in range(trf.shape[1])]
+	d1_pd = pd.DataFrame(data=trf,columns=columns)
+	d_all = pd.concat([d1_pd,df1.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
+
+	return d_all
+
 #normalize entire dataset (testing and training) using standardscaler
 #fit data for 1st dataset, then transform both and send it back
 def normalize_data(df1, df2):

@@ -199,7 +199,7 @@ mapping.output_map('maps/track20.html')
 D_SIZE = 50
 N_MEAS = 12
 CL_SIZE = 0.6
-CLUSTERS_MULTIPLIER = 2.1 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
+CLUSTERS_MULTIPLIER = 1 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 
 '''
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
@@ -212,7 +212,7 @@ nb_clusters = int(len(clustering_test_track)/int(CLUSTERS_MULTIPLIER*N_MEAS*2))
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
-set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=N_MEAS*2)
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=N_MEAS)
 
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
@@ -222,8 +222,8 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #draw map
 #for cnt, g in enumerate(gtws):
-#	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,250,coloring='clusters')
-#mapping.output_map('maps/clustering-map-agglomerative.html')
+#	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,300,coloring='clusters')
+#mapping.output_map('maps/clustering-map-agglomerative-full.html')
 
 
 #9.5.2018 - Applying PCA
@@ -232,10 +232,9 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #24.5.2018
 #AGGLOMERATIVE 2ND CLUSTERING
-training_set, validation_set = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=D_SIZE, nb_measures=N_MEAS)
+dataset, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=D_SIZE, nb_measures=N_MEAS, train_test=1)
 #intermediate storage to avoid recalculating dataset every time
-training_set.to_csv("storage-training.csv")
-validation_set.to_csv("storage-validation.csv")
+dataset.to_csv("dataset.csv")
 cfile = open("clsize.mikka","w")
 cfile.write(str(nb_clusters))
 cfile.close()
@@ -246,8 +245,7 @@ gfile.close()
 
 
 #import pre-computed dataset
-training_set = pd.read_csv("storage-training.csv")
-validation_set = pd.read_csv("storage-validation.csv")
+dataset = pd.read_csv("dataset.csv")
 cfile = open("clsize.mikka","r")
 nb_clusters = int(cfile.read())
 cfile.close()
@@ -257,28 +255,32 @@ gfile.close()
 
 
 #norm both sets the same way
-training_set_norm, validation_set_norm = cl.normalize_data(training_set,validation_set)
+dataset_norm = cl.normalize_data_one(dataset)
 print("Data normalized")
 
 #test different parameters
 ncl = int(nb_clusters*CL_SIZE)
-clusters_training = cl.clustering_feature_space_agglomerative(training_set_norm,nb_clusters=ncl)
-print("Training set done")
-clusters_validation = cl.clustering_feature_space_agglomerative(validation_set_norm,nb_clusters=ncl)
-print("Validation set done")
+clusters = cl.clustering_feature_space_agglomerative(dataset_norm,nb_clusters=ncl)
+print("Dataset clustering 2nd done")
 
-clusters_training.to_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
-clusters_validation.to_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
 
+clusters.to_csv("data/clusters_jaccard-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
 '''
 
-clusters_training = pd.read_csv("data/clusters_training-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
-clusters_validation = pd.read_csv("data/clusters_validation-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
+
+
+clusters = pd.read_csv("data/clusters_jaccard-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
+
 cfile = open("clsize.mikka","r")
 nb_clusters = int(cfile.read())
 cfile.close()
+ncl = int(nb_clusters*CL_SIZE)
 print("NB clusters: {}".format(nb_clusters))
 
+#test similarity. metrics 'Label1' or 'Label2'
+fp.cosine_similarity_classifier(clusters,metrics='Label1')
+
+#mapping.print_map_from_pandas(clusters,ncl,'maps/clustering-2nd-agglomerative-full.html')
 
 #Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 
@@ -286,7 +288,9 @@ print("NB clusters: {}".format(nb_clusters))
 #mapping.print_map_from_pandas(clusters_training,ncl,'maps/clustering-2nd-agglomerative-raw.html')
 #mapping.print_map_from_pandas(clusters_validation,ncl,'maps/clustering-2nd-agglomerative-stdnorm.html')
 
-fp.neuronal_classification_clusters(clusters_training,clusters_validation,nb_clusters)
+#fp.neuronal_classification_clusters(clusters_training,clusters_validation,nb_clusters)
+
+
 
 '''
 #30.5.2018

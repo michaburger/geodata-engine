@@ -14,6 +14,7 @@ import sys
 from operator import itemgetter, attrgetter
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from scipy import spatial
 
 comparison_datasets=[]
 
@@ -247,6 +248,23 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 		labels_test.append(point['Label'])
 
 	return ((data_train, labels_train),(data_test,labels_test))
+
+#calculates the cosine similarity between two vectors (already normed, data of gateways)
+def cosine_similarity(v1,v2):
+	if len(v1) != len(v2):
+		print("ERROR: not same vector length in cosine similarity function!")
+		return 0.0
+
+	dist = (2 - spatial.distance.cosine(v1,v2))/2.0
+	print(dist)
+
+def cosine_similarity_classifier(db, **kwargs):
+	metrics = kwargs['metrics']
+
+	db = db.drop(columns=['cLat','cLon','rLat','rLon','Label1' if metrics == 'Label2' else 'Label2'])
+	db.sort_values(by=metrics)
+	print(db)
+
 
 
 def jaccard_classifier(input_track, **kwargs):
