@@ -132,27 +132,62 @@ def normalize_data_one(df1):
 
 	return d_all
 
+#split clusters by label and return array of pandas. Either metrics='Label1' or 'Label2'
+def split_by_cluster(db, **kwargs):
+	metrics = kwargs['metrics']
+	n = int(db.loc[:,[metrics]].max())
+
+	clusters_pandas=[[] for i in range(n+1)]
+	for i in range(n+1):
+		clusters_pandas[i] = db[db[metrics]==i]
+	return clusters_pandas, n
+
+#split into training and testing set with equal distribution over all clusters
+def split_train_test(db, **kwargs):
+	ratio = 0.8
+	if 'ratio' in kwargs:
+		ratio = kwargs['ratio']
+	#seperate by clusters
+	cl_sep = split_by_cluster(db,metrics=kwargs['metrics'])
+	train = pd.DataFrame()
+	test = pd.DataFrame()
+
+	#split in train and test for every cluster and concatenate together
+	for df in cl_sep[0]:
+		#create random order
+		n = df.shape[0]
+		if n > 0:
+			df = df.sample(frac=1).reset_index(drop=True)
+			sep = int(ratio*n)
+			df_train = df.iloc[:sep]
+			df_test = df.iloc[sep:]
+			train = pd.concat([train,df_train],axis=0)
+			test = pd.concat([test,df_test],axis=0)
+	train.reset_index(drop=True,inplace=True)
+	test.reset_index(drop=True,inplace=True)
+	return train, test
+
+
 #normalize entire dataset (testing and training) using standardscaler
 #fit data for 1st dataset, then transform both and send it back
-def normalize_data(df1, df2):
-	data1 = df1.drop(columns=['Label1','cLat','cLon','rLat','rLon'])
-	data2 = df2.drop(columns=['Label1','cLat','cLon','rLat','rLon'])
-	all_data = pd.concat([data1,data2])
+def normalize_data(training, testing):
+
+	data1 = training.drop(columns=['Label1','cLat','cLon','rLat','rLon'])
+	data2 = testing.drop(columns=['Label1','cLat','cLon','rLat','rLon'])
 
 	#apply standardscaler on all data
 	scaler = StandardScaler()
-	transformed = scaler.fit(all_data)
+	scaler.fit(data1) #fit on training, transform on both.
 
 	d1_trf = scaler.transform(data1)
 	d2_trf = scaler.transform(data2)
 
-	columns=['C{}'.format(i) for i in range(d1_trf.shape[1])]
-	d1_pd = pd.DataFrame(data=d1_trf,columns=columns)
-	d2_pd = pd.DataFrame(data=d2_trf,columns=columns)
+	d1_pd = pd.DataFrame(data=d1_trf,columns=['C{}'.format(i) for i in range(d1_trf.shape[1])])
+	d2_pd = pd.DataFrame(data=d2_trf,columns=['C{}'.format(i) for i in range(d2_trf.shape[1])])
 
 	#add label and coordinates again
-	d1_all = pd.concat([d1_pd,df1.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
-	d2_all = pd.concat([d2_pd,df2.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
+	d1_all = pd.concat([d1_pd,training.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
+	d2_all = pd.concat([d2_pd,testing.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
 
 	return d1_all, d2_all
 

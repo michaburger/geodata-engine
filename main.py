@@ -7,6 +7,7 @@ import random
 import numpy as np
 import pandas as pd
 import geometry as geo
+import geopy.distance
 import fingerprinting as fp
 import clustering as cl
 import sys
@@ -196,10 +197,10 @@ mapping.output_map('maps/track20.html')
 #4.5.2018 - Clustering
 
 #parameters
-D_SIZE = 50
+D_SIZE = 100
 N_MEAS = 12
 CL_SIZE = 0.6
-CLUSTERS_MULTIPLIER = 1 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
+CLUSTERS_MULTIPLIER = 2 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 
 '''
 clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
@@ -234,7 +235,7 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 #AGGLOMERATIVE 2ND CLUSTERING
 dataset, empty = fp.create_dataset_pandas(cluster_array, gtws, dataset_size=D_SIZE, nb_measures=N_MEAS, train_test=1)
 #intermediate storage to avoid recalculating dataset every time
-dataset.to_csv("dataset.csv")
+dataset.to_csv("dataset.csv", index=False)
 cfile = open("clsize.mikka","w")
 cfile.write(str(nb_clusters))
 cfile.close()
@@ -242,7 +243,7 @@ gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
 
-
+'''
 
 #import pre-computed dataset
 dataset = pd.read_csv("dataset.csv")
@@ -255,21 +256,21 @@ gfile.close()
 
 
 #norm both sets the same way
-dataset_norm = cl.normalize_data_one(dataset)
-print("Data normalized")
+#dataset = cl.normalize_data_one(dataset)
+#print("Data normalized")
 
 #test different parameters
-ncl = int(nb_clusters*CL_SIZE)
-clusters = cl.clustering_feature_space_agglomerative(dataset_norm,nb_clusters=ncl)
-print("Dataset clustering 2nd done")
+#ncl = int(nb_clusters*CL_SIZE)
+#clusters = cl.clustering_feature_space_agglomerative(dataset,nb_clusters=ncl)
+clusters = dataset #not performing 2nd clustering at the moment
+#print("Dataset clustering 2nd done")
+
+#clusters.to_csv("data/clusters_jaccard_raw-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)),index=False)
 
 
-clusters.to_csv("data/clusters_jaccard-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
-'''
 
 
-
-clusters = pd.read_csv("data/clusters_jaccard-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
+#clusters = pd.read_csv("data/clusters_jaccard_raw-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
 
 cfile = open("clsize.mikka","r")
 nb_clusters = int(cfile.read())
@@ -277,8 +278,62 @@ cfile.close()
 ncl = int(nb_clusters*CL_SIZE)
 print("NB clusters: {}".format(nb_clusters))
 
-#test similarity. metrics 'Label1' or 'Label2'
-fp.cosine_similarity_classifier(clusters,metrics='Label1')
+label = 'Label1'
+database, testing = cl.split_train_test(clusters,ratio=0.8,metrics=label)
+
+#normalize 
+database, testing = cl.normalize_data(database,testing)
+
+accuracy_first = 0
+accuracy_third = 0 #correct cluster is in first 3
+accuracy_fifth = 0
+print("*****************************************************************************************************")
+print("Evaluating accuracy, please wait...")
+print("[. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ]")
+print("[",end="",flush=True)
+for n in range(0,100):
+	#generate random test track out of testing set
+	test_split, nncl = cl.split_by_cluster(testing,metrics=label)
+	while(True):
+		testing_cluster_idx = random.randint(0,nncl)
+		testing_features_pd = test_split[testing_cluster_idx]
+		if testing_features_pd.shape[0] > 0:
+			#print("Testing cluster ID: {}".format(testing_cluster_idx))
+			break
+
+	#choose a random testing 
+	#test similarity. metrics 'Label1' or 'Label2'
+	coords_cluster = (testing_features_pd.iloc[0]['cLat'], testing_features_pd.iloc[0]['cLon'])
+	best_classes = fp.cosine_similarity_classifier_knn(database,testing_features_pd.iloc[0],nncl,metrics=label,idx=testing_cluster_idx)
+
+	#mean distance errors in first 5 guesses
+	distance_errors = [[] for i in range(5)]
+	for i in range(5):
+		clss = best_classes.index.values[i]
+		coords_guess = (test_split[clss].iloc[0]['cLat'],test_split[clss].iloc[0]['cLon'])
+		err = geopy.distance.vincenty(coords_cluster,coords_guess).km*1000
+		distance_errors[i].append(err)
+		print("Guess {} - Error: {}m".format(i+1,err))
+
+	#accuracies
+	if (best_classes.index.values[0] == testing_cluster_idx):
+		accuracy_first += 1
+	if (testing_cluster_idx in best_classes.index.values[:3]):
+		accuracy_third += 1
+	if (testing_cluster_idx in best_classes.index.values[:5]):
+		accuracy_fifth += 1
+	#show status
+	if n % 2 == 0: print(".",end=" ",flush=True)
+print("]")
+print("Accuracy first guess: {}%".format(accuracy_first))
+print("Accuracy top three: {}%".format(accuracy_third))
+print("Accuracy top five: {}%".format(accuracy_fifth))
+print("Mean position error 1st guess: {}m".format(np.mean(distance_errors[0])))
+print("Mean position error 2nd guess: {}m".format(np.mean(distance_errors[1])))
+print("Mean position error 3rd guess: {}m".format(np.mean(distance_errors[2])))
+print("Mean position error 4th guess: {}m".format(np.mean(distance_errors[3])))
+print("Mean position error 5th guess: {}m".format(np.mean(distance_errors[4])))
+
 
 #mapping.print_map_from_pandas(clusters,ncl,'maps/clustering-2nd-agglomerative-full.html')
 

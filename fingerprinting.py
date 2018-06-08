@@ -256,16 +256,37 @@ def cosine_similarity(v1,v2):
 		return 0.0
 
 	dist = (2 - spatial.distance.cosine(v1,v2))/2.0
-	print(dist)
+	return dist
 
-def cosine_similarity_classifier(db, **kwargs):
+def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	metrics = kwargs['metrics']
+	idx = kwargs['idx'] if 'idx' in kwargs else 0
 
-	db = db.drop(columns=['cLat','cLon','rLat','rLon','Label1' if metrics == 'Label2' else 'Label2'])
-	db.sort_values(by=[metrics])
-	print(db)
+	db_sparse = db.drop(columns=['cLat','cLon','rLat','rLon'])#,'Label1' if metrics == 'Label2' else 'Label2'])
+	test = test.drop(['cLat','cLon','rLat','rLon','Label1'])#,'Label2'])
+	v_test = test.tolist()
 
+	#calculate the similarity for every point in the comparison database
+	sim = [[] for i in range(0,nncl+1)]
 
+	for i, row in db_sparse.iterrows():
+		label = int(row[metrics])
+		row = row.drop(metrics)
+		#create vector
+		v1 = row.tolist()
+		sim[label].append(cosine_similarity(v1,v_test))
+
+	#list the most probable clusters with probability index
+	cluster_prb = []
+	for c in sim:
+		if len(c) > 0:
+			cluster_prb.append((np.mean(c),np.var(c)))
+		else:
+			cluster_prb.append((0,0))
+
+	cluster_stat = pd.DataFrame(data=cluster_prb,columns=['Mean Similarity','Variance'])
+	cluster_stat.sort_values(by='Mean Similarity',ascending=False,inplace=True)
+	return cluster_stat.head(20)
 
 def jaccard_classifier(input_track, **kwargs):
 	'''
