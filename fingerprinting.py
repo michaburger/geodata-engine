@@ -261,6 +261,7 @@ def cosine_similarity(v1,v2):
 def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	metrics = kwargs['metrics']
 	idx = kwargs['idx'] if 'idx' in kwargs else 0
+	first_values = kwargs['first_values'] if 'first_values' in kwargs else 10
 
 	db_sparse = db.drop(columns=['cLat','cLon','rLat','rLon'])#,'Label1' if metrics == 'Label2' else 'Label2'])
 	test = test.drop(['cLat','cLon','rLat','rLon','Label1'])#,'Label2'])
@@ -276,17 +277,26 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 		v1 = row.tolist()
 		sim[label].append(cosine_similarity(v1,v_test))
 
-	#list the most probable clusters with probability index
-	cluster_prb = []
+	#list the most probable clusters with similarity index
+	cluster_sim = []
 	for c in sim:
 		if len(c) > 0:
-			cluster_prb.append((np.mean(c),np.var(c)))
+			cluster_sim.append((np.mean(c),np.var(c)))
 		else:
-			cluster_prb.append((0,0))
+			cluster_sim.append((0,0))
 
-	cluster_stat = pd.DataFrame(data=cluster_prb,columns=['Mean Similarity','Variance'])
+	cluster_stat = pd.DataFrame(data=cluster_sim,columns=['Mean Similarity','Variance'])
 	cluster_stat.sort_values(by='Mean Similarity',ascending=False,inplace=True)
-	return cluster_stat.head(20)
+
+	#rescale and norm for the first 10 clusters --> probabilities
+	head = cluster_stat.head(first_values+1)
+	head['rescaled'] = (head['Mean Similarity'] - head['Mean Similarity'].min())/(head['Mean Similarity'].max()-head['Mean Similarity'].min())
+	head['Probability'] = (head['rescaled']/head['rescaled'].sum())
+	head.drop(columns=['rescaled'],inplace=True)
+	head.drop(head.index[first_values],inplace=True) #drop last index with probability 0
+	print(head)
+
+	return head
 
 def jaccard_classifier(input_track, **kwargs):
 	'''

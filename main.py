@@ -284,14 +284,13 @@ database, testing = cl.split_train_test(clusters,ratio=0.8,metrics=label)
 #normalize 
 database, testing = cl.normalize_data(database,testing)
 
-accuracy_first = 0
-accuracy_third = 0 #correct cluster is in first 3
-accuracy_fifth = 0
+accuracy_top = [0 for i in range (10)]
+distance_errors = [[] for i in range(10)]
 print("*****************************************************************************************************")
 print("Evaluating accuracy, please wait...")
 print("[. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ]")
 print("[",end="",flush=True)
-for n in range(0,100):
+for n in range(0,1):
 	#generate random test track out of testing set
 	test_split, nncl = cl.split_by_cluster(testing,metrics=label)
 	while(True):
@@ -305,10 +304,10 @@ for n in range(0,100):
 	#test similarity. metrics 'Label1' or 'Label2'
 	coords_cluster = (testing_features_pd.iloc[0]['cLat'], testing_features_pd.iloc[0]['cLon'])
 	best_classes = fp.cosine_similarity_classifier_knn(database,testing_features_pd.iloc[0],nncl,metrics=label,idx=testing_cluster_idx)
+	#print("Real index: {}".format(testing_cluster_idx))
 
 	#mean distance errors in first 5 guesses
-	distance_errors = [[] for i in range(5)]
-	for i in range(5):
+	for i in range(10):
 		clss = best_classes.index.values[i]
 		coords_guess = (test_split[clss].iloc[0]['cLat'],test_split[clss].iloc[0]['cLon'])
 		err = geopy.distance.vincenty(coords_cluster,coords_guess).km*1000
@@ -317,22 +316,18 @@ for n in range(0,100):
 
 	#accuracies
 	if (best_classes.index.values[0] == testing_cluster_idx):
-		accuracy_first += 1
-	if (testing_cluster_idx in best_classes.index.values[:3]):
-		accuracy_third += 1
-	if (testing_cluster_idx in best_classes.index.values[:5]):
-		accuracy_fifth += 1
+		accuracy_top[0] += 1
+	for i in range(1,10):
+		if (testing_cluster_idx in best_classes.index.values[:i]):
+			accuracy_top[i] += 1
 	#show status
 	if n % 2 == 0: print(".",end=" ",flush=True)
 print("]")
-print("Accuracy first guess: {}%".format(accuracy_first))
-print("Accuracy top three: {}%".format(accuracy_third))
-print("Accuracy top five: {}%".format(accuracy_fifth))
-print("Mean position error 1st guess: {}m".format(np.mean(distance_errors[0])))
-print("Mean position error 2nd guess: {}m".format(np.mean(distance_errors[1])))
-print("Mean position error 3rd guess: {}m".format(np.mean(distance_errors[2])))
-print("Mean position error 4th guess: {}m".format(np.mean(distance_errors[3])))
-print("Mean position error 5th guess: {}m".format(np.mean(distance_errors[4])))
+print("Top accuracies:")
+print(accuracy_top)
+print("\nDistance errors nb guess:")
+for i in range(10):
+	print(np.mean(distance_errors[i]))
 
 
 #mapping.print_map_from_pandas(clusters,ncl,'maps/clustering-2nd-agglomerative-full.html')
