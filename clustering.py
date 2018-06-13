@@ -110,7 +110,7 @@ def distance_clustering_agglomerative(dataset, **kwargs):
 			point.update({'track_ID':clusters[i]})
 		else:
 			point.update({'track_ID':-1})
-	print("Agglomerative clustering done!")
+	#print("Agglomerative clustering done!")
 	return dataset
 
 #split cluster dataset into array of datasets for each cluster, to be used to plot on the map like different tracks.
@@ -134,7 +134,7 @@ def normalize_data_one(df1):
 
 #split clusters by label and return array of pandas. Either metrics='Label1' or 'Label2'
 def split_by_cluster(db, **kwargs):
-	metrics = kwargs['metrics']
+	metrics = kwargs['metrics'] if 'metrics' in kwargs else 'Label1'
 	n = int(db.loc[:,[metrics]].max())
 
 	clusters_pandas=[[] for i in range(n+1)]

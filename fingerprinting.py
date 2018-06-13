@@ -15,6 +15,7 @@ from operator import itemgetter, attrgetter
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy import spatial
+import warnings
 
 comparison_datasets=[]
 
@@ -259,7 +260,7 @@ def cosine_similarity(v1,v2):
 	return dist
 
 def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
-	metrics = kwargs['metrics']
+	metrics = kwargs['metrics'] if 'metrics' in kwargs else 'Label1'
 	idx = kwargs['idx'] if 'idx' in kwargs else 0
 	first_values = kwargs['first_values'] if 'first_values' in kwargs else 10
 
@@ -288,15 +289,26 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	cluster_stat = pd.DataFrame(data=cluster_sim,columns=['Mean Similarity','Variance'])
 	cluster_stat.sort_values(by='Mean Similarity',ascending=False,inplace=True)
 
+	#ignore warnings in the next part
+	warnings.filterwarnings("ignore")
 	#rescale and norm for the first 10 clusters --> probabilities
 	head = cluster_stat.head(first_values+1)
-	head['rescaled'] = (head['Mean Similarity'] - head['Mean Similarity'].min())/(head['Mean Similarity'].max()-head['Mean Similarity'].min())
-	head['Probability'] = (head['rescaled']/head['rescaled'].sum())
-	head.drop(columns=['rescaled'],inplace=True)
+	head['rescaled'] = (head.loc[:,'Mean Similarity'] - head.loc[:,'Mean Similarity'].min()) / (head.loc[:,'Mean Similarity'].max()-head.loc[:,'Mean Similarity'].min())
+	head['Probability'] = head.loc[:,'rescaled'] / head.loc[:,'rescaled'].sum()
+	head.drop(columns='rescaled',inplace=True)
 	head.drop(head.index[first_values],inplace=True) #drop last index with probability 0
-	print(head)
 
-	return head
+	#add coordinates of center
+	center_coords = []
+	for index in head.index.values:
+		center_coords.append((db.loc[index,'cLat'],db.loc[index,'cLon']))
+
+	head = head.reset_index()
+	coords_pd = pd.DataFrame(data=center_coords,columns=['Lat','Lon'])
+	best_with_coords = pd.concat([head,coords_pd],axis=1)
+	best_with_coords.rename(index=str, columns={"index":"Cluster ID"},inplace=True)
+
+	return best_with_coords
 
 def jaccard_classifier(input_track, **kwargs):
 	'''

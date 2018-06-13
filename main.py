@@ -10,6 +10,7 @@ import geometry as geo
 import geopy.distance
 import fingerprinting as fp
 import clustering as cl
+import particlefilter as pf
 import sys
 import time
 
@@ -198,15 +199,16 @@ mapping.output_map('maps/track20.html')
 
 #parameters
 D_SIZE = 100
-N_MEAS = 12
+N_MEAS = 9
 CL_SIZE = 0.6
 CLUSTERS_MULTIPLIER = 2 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 
-'''
-clustering_test_track = db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00")
 #only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
-gtws = gateway_list_track(db.request_track(20,0,7,'ALL',300,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
+
+'''
 nb_gtws = len(gtws)
+clustering_test_track = db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00")
 
 #have around 10-30 points per cluster. This is a parameter to optimize
 nb_clusters = int(len(clustering_test_track)/int(CLUSTERS_MULTIPLIER*N_MEAS*2))
@@ -242,8 +244,8 @@ cfile.close()
 gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
-
 '''
+
 
 #import pre-computed dataset
 dataset = pd.read_csv("dataset.csv")
@@ -284,13 +286,71 @@ database, testing = cl.split_train_test(clusters,ratio=0.8,metrics=label)
 #normalize 
 database, testing = cl.normalize_data(database,testing)
 
+#create real test feature space from STATIC validation track
+validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_14:00:00","2018-06-12_15:00:00") #static measures on Place Cosanday for this date
+pf.create_time_series(validation_track_static)
+static_validation_coords = (46.518313, 6.566825)
+#validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date
+#static_validation_coords = (46.517019, 6.561670)
+validation_cluster = cl.distance_clustering_agglomerative(validation_track_static,nb_clusters=1,min_points=N_MEAS) #create only one cluster (static)
+validation_cluster = cl.cluster_split(validation_cluster,1)
+validation_set, empty = fp.create_dataset_pandas(validation_cluster, gtws, dataset_size=10, nb_measures=N_MEAS, train_test=1)
+
+#normalize real testing set
+nn, validation_normed = cl.normalize_data(database,validation_set)
+nn, nncl = cl.split_by_cluster(database) #nncl is still required...
+
+#test, simulate historical series
+pf.get_particle_distribution(validation_normed.loc[1],database,nncl)
+pf.get_particle_distribution(validation_normed.loc[2],database,nncl)
+pf.get_particle_distribution(validation_normed.loc[3],database,nncl,render_map=True)
+
+
+'''
+#13.6.2018 test accuracy by adding distance error to best classes pandas table
+idxs = best_classes.index.values
+errs = []
+for index in idxs:
+	inter = nn[index].iloc[1]
+	clustercoords = (inter['cLat'],inter['cLon'])
+	err = geopy.distance.vincenty(clustercoords,static_validation_coords).km*1000
+	errs.append(err)
+df = pd.DataFrame(data=errs,columns=['Distance'])
+best_classes = best_classes.reset_index()
+best_classes = pd.concat([best_classes,df],axis=1)
+print(best_classes)
+'''
+
+
+'''
+#generate test feature space
+test_split, nncl = cl.split_by_cluster(testing)
+while(True):
+	testing_cluster_idx = random.randint(0,nncl)
+	testing_features_pd = test_split[testing_cluster_idx]
+	#it can be an empty cluster id which has been filtered out by my algorithms before. check.
+	if testing_features_pd.shape[0] > 0:
+		print("Testing cluster ID: {}".format(testing_cluster_idx))
+		break
+
+#random order and reset index
+testing_features_pd = testing_features_pd.sample(frac=1).reset_index(drop=True)
+pf.get_particle_distribution(testing_features_pd.loc[1],database,nncl)
+'''
+#TODO: Creating temporal test series. Now only do it with first one
+
+
+'''
+#KNN COSINE SIMILARITY
+#9.6.2018 - Testing accuracy of classifier
 accuracy_top = [0 for i in range (10)]
 distance_errors = [[] for i in range(10)]
+proba_vs_distance = pd.DataFrame()
 print("*****************************************************************************************************")
 print("Evaluating accuracy, please wait...")
 print("[. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ]")
 print("[",end="",flush=True)
-for n in range(0,1):
+for n in range(0,100):
 	#generate random test track out of testing set
 	test_split, nncl = cl.split_by_cluster(testing,metrics=label)
 	while(True):
@@ -305,14 +365,16 @@ for n in range(0,1):
 	coords_cluster = (testing_features_pd.iloc[0]['cLat'], testing_features_pd.iloc[0]['cLon'])
 	best_classes = fp.cosine_similarity_classifier_knn(database,testing_features_pd.iloc[0],nncl,metrics=label,idx=testing_cluster_idx)
 	#print("Real index: {}".format(testing_cluster_idx))
-
+	proba_list = best_classes.loc[:,'Probability'].tolist()
 	#mean distance errors in first 5 guesses
 	for i in range(10):
 		clss = best_classes.index.values[i]
 		coords_guess = (test_split[clss].iloc[0]['cLat'],test_split[clss].iloc[0]['cLon'])
 		err = geopy.distance.vincenty(coords_cluster,coords_guess).km*1000
+		df = pd.DataFrame([[err,proba_list[i]]],columns=['Distance','Probability'])
+		proba_vs_distance = proba_vs_distance.append(df)
 		distance_errors[i].append(err)
-		print("Guess {} - Error: {}m".format(i+1,err))
+		#print("Guess {} - Error: {}m".format(i+1,err))
 
 	#accuracies
 	if (best_classes.index.values[0] == testing_cluster_idx):
@@ -328,11 +390,12 @@ print(accuracy_top)
 print("\nDistance errors nb guess:")
 for i in range(10):
 	print(np.mean(distance_errors[i]))
-
+print("Probability vs distance")
+proba_vs_distance.to_csv("proba_vs_dist.csv")
+'''
 
 #mapping.print_map_from_pandas(clusters,ncl,'maps/clustering-2nd-agglomerative-full.html')
 
-#Todo: correctly attribute same cluster numbers to label2 for training and validation. or check predictive model.
 
 
 #mapping.print_map_from_pandas(clusters_training,ncl,'maps/clustering-2nd-agglomerative-raw.html')

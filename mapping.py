@@ -164,6 +164,21 @@ def pick_opacity(heat):
 	else:
 		return 0.7
 
+#print particles from pandas
+def print_particles(particles_pd):
+	ftr1 = folium.FeatureGroup(name="Particles")
+	for idx, particle in particles_pd.iterrows():
+		ftr1.add_child(folium.CircleMarker(location=[particle.loc['lat'],particle.loc['lon']],
+			fill=True,radius=10,
+			popup="Age: {}".format(int(particle.loc['age'])),
+			color='',
+			fill_color='blue',
+			fill_opacity=1/(particle.loc['age']+1)**0.7))
+	map.add_child(ftr1)
+	output_map("maps/particles.html")
+
+
+
 def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatellites = 1, minHDOP = 500, **kwargs):
 
 	color_clusters = False
