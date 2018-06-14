@@ -262,6 +262,7 @@ def cosine_similarity(v1,v2):
 def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	metrics = kwargs['metrics'] if 'metrics' in kwargs else 'Label1'
 	idx = kwargs['idx'] if 'idx' in kwargs else 0
+	flatten = kwargs['flatten_proba'] if 'flatten_proba' in kwargs else 1.0
 	first_values = kwargs['first_values'] if 'first_values' in kwargs else 10
 
 	db_sparse = db.drop(columns=['cLat','cLon','rLat','rLon'])#,'Label1' if metrics == 'Label2' else 'Label2'])
@@ -292,7 +293,7 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	warnings.filterwarnings("ignore")
 	#rescale and norm for the first 10 clusters --> probabilities
 	head = cluster_stat.head(first_values+1)
-	head['rescaled'] = (head.loc[:,'Mean Similarity'] - head.loc[:,'Mean Similarity'].min()) / (head.loc[:,'Mean Similarity'].max()-head.loc[:,'Mean Similarity'].min())
+	head['rescaled'] = ((head.loc[:,'Mean Similarity'] - head.loc[:,'Mean Similarity'].min()) / (head.loc[:,'Mean Similarity'].max()-head.loc[:,'Mean Similarity'].min()))**flatten
 	head['Probability'] = head.loc[:,'rescaled'] / head.loc[:,'rescaled'].sum()
 	head.drop(columns='rescaled',inplace=True)
 	head.drop(head.index[first_values],inplace=True) #drop last index with probability 0

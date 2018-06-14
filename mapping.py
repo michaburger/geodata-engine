@@ -165,9 +165,9 @@ def pick_opacity(heat):
 		return 0.7
 
 #print particles from pandas
-def print_particles(particles_pd):
+def print_particles(particles_pd,layer_name):
 	particles_layer = folium.FeatureGroup(name="Particles")
-	heatmap_layer = folium.FeatureGroup(name="Heatmap")
+	heatmap_layer = folium.FeatureGroup(name=layer_name)
 
 	lat, lon, heat = ([] for i in range(3))
 	for idx, particle in particles_pd.iterrows():
@@ -186,7 +186,6 @@ def print_particles(particles_pd):
 
 	map.add_child(particles_layer)
 	map.add_child(heatmap_layer)
-	output_map("maps/particles.html")
 
 
 

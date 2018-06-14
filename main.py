@@ -200,8 +200,7 @@ mapping.output_map('maps/track20.html')
 #parameters
 D_SIZE = 100
 N_MEAS = 12
-CL_SIZE = 0.6
-CLUSTERS_MULTIPLIER = 2 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
+CLUSTER_SIZE = 1 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 
 #only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
@@ -211,7 +210,7 @@ nb_gtws = len(gtws)
 clustering_test_track = db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00")
 
 #have around 10-30 points per cluster. This is a parameter to optimize
-nb_clusters = int(len(clustering_test_track)/int(CLUSTERS_MULTIPLIER*N_MEAS*2))
+nb_clusters = int(len(clustering_test_track)/int(CLUSTER_SIZE*N_MEAS*2))
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
@@ -244,6 +243,7 @@ cfile.close()
 gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
+print("Clustering files generated!")
 '''
 
 
@@ -277,8 +277,8 @@ clusters = dataset #not performing 2nd clustering at the moment
 cfile = open("clsize.mikka","r")
 nb_clusters = int(cfile.read())
 cfile.close()
-ncl = int(nb_clusters*CL_SIZE)
-print("NB clusters: {}".format(nb_clusters))
+#ncl = int(nb_clusters*CL_SIZE)
+print("NB clusters imported from file: {}".format(nb_clusters))
 
 label = 'Label1'
 database, testing = cl.split_train_test(clusters,ratio=0.8,metrics=label)
@@ -288,24 +288,26 @@ database, testing = cl.normalize_data(database,testing)
 
 #create real test feature space from STATIC validation track
 validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_14:00:00","2018-06-12_15:00:00") #static measures on Place Cosanday for this date
-#pf.create_time_series(validation_track_static,N_MEAS)
+validation_track_array = pf.create_time_series(validation_track_static,6)
 #static_validation_coords = (46.518313, 6.566825)
 #validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date
 #static_validation_coords = (46.517019, 6.561670)
-validation_cluster = cl.distance_clustering_agglomerative(validation_track_static,nb_clusters=1,min_points=N_MEAS) #create only one cluster (static)
-validation_cluster = cl.cluster_split(validation_cluster,1)
-validation_set, empty = fp.create_dataset_pandas(validation_cluster, gtws, dataset_size=10, nb_measures=N_MEAS, train_test=1)
+#validation_track_static = db.request_track(10,0,7,'78AF580300000485') #using the trilateration tracks
 
-#normalize real testing set
-nn, validation_normed = cl.normalize_data(database,validation_set)
-nn, nncl = cl.split_by_cluster(database) #nncl is still required...
+#14.6.2018 HISTORICAL SERIES
+for i, track in enumerate(validation_track_array):
+	validation_cluster = cl.distance_clustering_agglomerative(validation_track_static,nb_clusters=1,min_points=N_MEAS) #create only one cluster (static)
+	validation_cluster = cl.cluster_split(validation_cluster,1)
+	validation_set, empty = fp.create_dataset_pandas(validation_cluster, gtws, dataset_size=10, nb_measures=N_MEAS, train_test=1)
 
-#test, simulate historical series
-pf.get_particle_distribution(validation_normed.loc[1],database,nncl)
-pf.get_particle_distribution(validation_normed.loc[2],database,nncl)
-pf.get_particle_distribution(validation_normed.loc[3],database,nncl)
-pf.get_particle_distribution(validation_normed.loc[4],database,nncl)
-pf.get_particle_distribution(validation_normed.loc[5],database,nncl,render_map=True)
+	#normalize real testing set
+	nn, validation_normed = cl.normalize_data(database,validation_set)
+	nn, nncl = cl.split_by_cluster(database) #nncl is still required...
+
+	#test, simulate historical series
+	dist = pf.get_particle_distribution(validation_normed.loc[1],database,nncl,"t = {}".format(i-len(validation_track_array)))
+mapping.output_map("maps/particles.html")
+print("Particle map rendered!")
 
 
 '''
