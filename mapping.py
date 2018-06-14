@@ -166,15 +166,26 @@ def pick_opacity(heat):
 
 #print particles from pandas
 def print_particles(particles_pd):
-	ftr1 = folium.FeatureGroup(name="Particles")
+	particles_layer = folium.FeatureGroup(name="Particles")
+	heatmap_layer = folium.FeatureGroup(name="Heatmap")
+
+	lat, lon, heat = ([] for i in range(3))
 	for idx, particle in particles_pd.iterrows():
-		ftr1.add_child(folium.CircleMarker(location=[particle.loc['lat'],particle.loc['lon']],
+		lat.append(particle.loc['lat'])
+		lon.append(particle.loc['lon'])
+		heat.append(1/(particle.loc['age']+1))
+		particles_layer.add_child(folium.CircleMarker(location=[particle.loc['lat'],particle.loc['lon']],
 			fill=True,radius=10,
 			popup="Age: {}".format(int(particle.loc['age'])),
 			color='',
 			fill_color='blue',
 			fill_opacity=1/(particle.loc['age']+1)**0.7))
-	map.add_child(ftr1)
+
+	htmp_data=list(zip(lat,lon,heat))
+	heatmap_layer.add_child(HeatMap(htmp_data,radius=25,blur=50,min_opacity=0.5,))
+
+	map.add_child(particles_layer)
+	map.add_child(heatmap_layer)
 	output_map("maps/particles.html")
 
 

@@ -4,11 +4,13 @@ import fingerprinting as fp
 import mapping as mp
 import random
 import math
+import time
 
 N_SAMPLE = 100
-CLUSTER_R = 60
+CLUSTER_R = 30
 SPEED = 0
 DISCARD = 0.3 #historical discard
+FIRST_VALUES = 5 #how many of the first guesses to consider
 
 pf_store = pd.DataFrame(columns=['lat','lon','age'])
 
@@ -47,12 +49,19 @@ def get_random_position(lat,lon):
 
 	return (lat+dyc, lon+dxc)
 
-def create_artificial_time_series():
-	print(0)
+def create_time_series(validation, nb_meas):
+	#split validation track into sub-tracks, always NB_MEAS points
+	TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f+02:00" #parse with a different parser to take into account the time zone
+	last_time
+	for point in validation:
+		point_time = time.strptime(point['time'],TIME_FORMAT)
+		#blabal
+		last_time = point_time
 
 def get_particle_distribution(sample_feature_space,database,nncl,**kwargs):
 	render_map = kwargs['render_map'] if 'render_map' in kwargs else False 
-	best_classes = fp.cosine_similarity_classifier_knn(database,sample_feature_space,nncl,first_values=20)
+	best_classes = fp.cosine_similarity_classifier_knn(database,sample_feature_space,nncl,first_values=FIRST_VALUES)
+	print(best_classes)
 	global pf_store
 	particles = []
 	#for every cluster, sample p*N_SAMPLE points with random position inside cluster
@@ -69,7 +78,7 @@ def get_particle_distribution(sample_feature_space,database,nncl,**kwargs):
 		pf_store = pf_store.sample(frac=1).reset_index(drop=True).loc[:int(pf_store.shape[0]*(1-DISCARD)),:]
 		pf_store['age'] = pf_store['age']+1
 	pf_store = pf_store.append(new_particles,ignore_index=True)
-	print(pf_store)
+	#print(pf_store)
 
 	if render_map:
 		mp.print_particles(pf_store)

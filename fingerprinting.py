@@ -267,7 +267,6 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	db_sparse = db.drop(columns=['cLat','cLon','rLat','rLon'])#,'Label1' if metrics == 'Label2' else 'Label2'])
 	test = test.drop(['cLat','cLon','rLat','rLon','Label1'])#,'Label2'])
 	v_test = test.tolist()
-
 	#calculate the similarity for every point in the comparison database
 	sim = [[] for i in range(0,nncl+1)]
 
@@ -301,7 +300,9 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	#add coordinates of center
 	center_coords = []
 	for index in head.index.values:
-		center_coords.append((db.loc[index,'cLat'],db.loc[index,'cLon']))
+		c = db.loc[np.isclose(db[metrics],index)].reset_index(drop=True).loc[1,['cLat','cLon']]
+		#print("Cluster {} - {} {}".format(index,c.loc['cLat'],c.loc['cLon']))
+		center_coords.append((c.loc['cLat'],c.loc['cLon']))
 
 	head = head.reset_index()
 	coords_pd = pd.DataFrame(data=center_coords,columns=['Lat','Lon'])

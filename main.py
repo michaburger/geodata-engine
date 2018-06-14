@@ -199,7 +199,7 @@ mapping.output_map('maps/track20.html')
 
 #parameters
 D_SIZE = 100
-N_MEAS = 9
+N_MEAS = 12
 CL_SIZE = 0.6
 CLUSTERS_MULTIPLIER = 2 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 
@@ -225,8 +225,8 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 #draw map
 #for cnt, g in enumerate(gtws):
-#	mapping.add_point_layer(set_with_clusters,gtws[cnt],gtws[cnt],3,300,coloring='clusters')
-#mapping.output_map('maps/clustering-map-agglomerative-full.html')
+mapping.add_point_layer(set_with_clusters,"1st clustering",'0B030153',3,300,coloring='clusters')
+mapping.output_map('maps/clustering-map-agglomerative-full.html')
 
 
 #9.5.2018 - Applying PCA
@@ -288,8 +288,8 @@ database, testing = cl.normalize_data(database,testing)
 
 #create real test feature space from STATIC validation track
 validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_14:00:00","2018-06-12_15:00:00") #static measures on Place Cosanday for this date
-pf.create_time_series(validation_track_static)
-static_validation_coords = (46.518313, 6.566825)
+#pf.create_time_series(validation_track_static,N_MEAS)
+#static_validation_coords = (46.518313, 6.566825)
 #validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date
 #static_validation_coords = (46.517019, 6.561670)
 validation_cluster = cl.distance_clustering_agglomerative(validation_track_static,nb_clusters=1,min_points=N_MEAS) #create only one cluster (static)
@@ -303,7 +303,9 @@ nn, nncl = cl.split_by_cluster(database) #nncl is still required...
 #test, simulate historical series
 pf.get_particle_distribution(validation_normed.loc[1],database,nncl)
 pf.get_particle_distribution(validation_normed.loc[2],database,nncl)
-pf.get_particle_distribution(validation_normed.loc[3],database,nncl,render_map=True)
+pf.get_particle_distribution(validation_normed.loc[3],database,nncl)
+pf.get_particle_distribution(validation_normed.loc[4],database,nncl)
+pf.get_particle_distribution(validation_normed.loc[5],database,nncl,render_map=True)
 
 
 '''
