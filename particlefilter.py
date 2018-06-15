@@ -7,13 +7,14 @@ import math
 import datetime
 
 N_SAMPLE = 250
-CLUSTER_R = 20
-SPEED = 0
+CLUSTER_R = 30
+SPEED = 1.5 #m/s
+F_SAMPLING = 30 #seconds between 2 transmissions
 DISCARD = 0.3 #historical discard
 FLATTEN_PROBABILITY = 0.5 #take n-root after the min-max probability calculation
 FIRST_VALUES = 10 #how many of the first guesses to consider
 
-pf_store = pd.DataFrame(columns=['lat','lon','age'])
+pf_store = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
 
 #because geopy.distance doesn't offer an inverse function. 
 #Results compareable to geopy.distance.great_circle
@@ -37,9 +38,9 @@ def coord_to_m(latlon, degrees, deglat):
 		return 0
 
 #returns a random position within the circle with radius CLUSTER_R
-def get_random_position(lat,lon):
+def get_random_position(lat,lon,r):
 	#in meters
-	vector_l = random.uniform(0,CLUSTER_R)
+	vector_l = random.uniform(0,r)
 	angle = random.uniform(0,360)
 	dx = vector_l * math.cos(angle)
 	dy = vector_l * math.sin(angle)
@@ -68,7 +69,7 @@ def create_time_series(validation, nb_meas):
 		last_time = point_time
 	return all_series
 
-def get_particle_distribution(sample_feature_space,database,nncl,layer_name,**kwargs):
+def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**kwargs):
 	render_map = kwargs['render_map'] if 'render_map' in kwargs else False 
 	metrics_probability = kwargs['metrics_probability'] if 'metrics_probability' in kwargs else True
 	best_classes = fp.cosine_similarity_classifier_knn(database,sample_feature_space,nncl,first_values=FIRST_VALUES,flatten=FLATTEN_PROBABILITY)
@@ -83,19 +84,29 @@ def get_particle_distribution(sample_feature_space,database,nncl,layer_name,**kw
 			nb_particles = int(round(line.loc['Mean Similarity']*N_SAMPLE))
 		#print("Cluster {}, Generating {} particles".format(idx,nb_particles))
 		for p in range(nb_particles):
-			lat, lon = get_random_position(line.loc['Lat'],line.loc['Lon'])
-			particles.append((lat,lon,0))
-	new_particles = pd.DataFrame(data=particles,columns=['lat','lon','age'])
+			lat, lon = get_random_position(line.loc['Lat'],line.loc['Lon'],CLUSTER_R)
+			particles.append((lat,lon,0,line.loc['Lat'],line.loc['Lon']))
+	new_particles = pd.DataFrame(data=particles,columns=['lat','lon','age','clat','clon'])
 
 	if pf_store.empty == False:
 		#resample historical data
 		pf_store = pf_store.sample(frac=1).reset_index(drop=True).loc[:int(pf_store.shape[0]*(1-DISCARD)),:]
 		pf_store['age'] = pf_store['age']+1
+
+		#increase past radius according to device velocity
+		for i, particle in pf_store.iterrows():
+			lat_dynamic, lon_dynamic = get_random_position(particle.loc['clat'],particle.loc['clon'],CLUSTER_R+F_SAMPLING*SPEED*age)
+			pf_store['lat'] = lat_dynamic
+			pf_store['lon'] = lon_dynamic
+
+
 	pf_store = pf_store.append(new_particles,ignore_index=True)
+
+	mp.print_particles(pf_store,"t = {}".format(-1*age),real_pos,heatmap=True,particles=False)
+	return pf_store
 	#print(pf_store)
 
-	if render_map:
-		mp.print_particles(pf_store,layer_name)
+
 
 
 

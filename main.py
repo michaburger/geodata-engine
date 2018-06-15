@@ -199,8 +199,10 @@ mapping.output_map('maps/track20.html')
 
 #parameters
 D_SIZE = 100
-N_MEAS = 12
-CLUSTER_SIZE = 1 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
+N_MEAS = 9
+CLUSTER_SIZE = 2 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
+MIN_PTS_MULT = 1.5 #clusters with less than this value times N_MEAS points will be discarded
+MEAS_REDUCT_DYNAMIC = 1.0 #how many of the measurement points create a feature space will be reduced for the dynamic algorithm
 
 #only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
@@ -214,7 +216,7 @@ nb_clusters = int(len(clustering_test_track)/int(CLUSTER_SIZE*N_MEAS*2))
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
-set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=N_MEAS)
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=int(MIN_PTS_MULT*N_MEAS))
 
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
@@ -287,26 +289,34 @@ database, testing = cl.split_train_test(clusters,ratio=0.8,metrics=label)
 database, testing = cl.normalize_data(database,testing)
 
 #create real test feature space from STATIC validation track
-validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_14:00:00","2018-06-12_15:00:00") #static measures on Place Cosanday for this date
-validation_track_array = pf.create_time_series(validation_track_static,6)
+#validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_11:00:00","2018-06-15_13:00:00") #static measures on Place Cosanday for this date
+validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_14:00:00","2018-06-15_16:00:00") #dynamic measures. TODO: include real position for demo
+validation_track_array = pf.create_time_series(validation_track,int(N_MEAS*MEAS_REDUCT_DYNAMIC))
 #static_validation_coords = (46.518313, 6.566825)
 #validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date
 #static_validation_coords = (46.517019, 6.561670)
 #validation_track_static = db.request_track(10,0,7,'78AF580300000485') #using the trilateration tracks
 
 #14.6.2018 HISTORICAL SERIES
+print("[",end="")
+for i in range(len(validation_track_array)):
+	print("-",end="")
+print("]\n[")
 for i, track in enumerate(validation_track_array):
-	validation_cluster = cl.distance_clustering_agglomerative(validation_track_static,nb_clusters=1,min_points=N_MEAS) #create only one cluster (static)
+	validation_cluster = cl.distance_clustering_agglomerative(track,nb_clusters=1,min_points=int(N_MEAS*MEAS_REDUCT_DYNAMIC)) #create only one cluster (static)
 	validation_cluster = cl.cluster_split(validation_cluster,1)
 	validation_set, empty = fp.create_dataset_pandas(validation_cluster, gtws, dataset_size=10, nb_measures=N_MEAS, train_test=1)
-
+	
 	#normalize real testing set
 	nn, validation_normed = cl.normalize_data(database,validation_set)
 	nn, nncl = cl.split_by_cluster(database) #nncl is still required...
 
 	#test, simulate historical series
-	dist = pf.get_particle_distribution(validation_normed.loc[1],database,nncl,"t = {}".format(i-len(validation_track_array)))
+	real_pos= (track[0]['gps_lat'],track[0]['gps_lon'])
+	dist = pf.get_particle_distribution(validation_normed.loc[1],database,nncl,(len(validation_track_array)-(i+1)),real_pos)
+	print("-",end='',flush=True)
 mapping.output_map("maps/particles.html")
+print("]")
 print("Particle map rendered!")
 
 

@@ -165,9 +165,18 @@ def pick_opacity(heat):
 		return 0.7
 
 #print particles from pandas
-def print_particles(particles_pd,layer_name):
-	particles_layer = folium.FeatureGroup(name="Particles")
-	heatmap_layer = folium.FeatureGroup(name=layer_name)
+def print_particles(particles_pd,layer_name,real_pos,**kwargs):
+	particles = kwargs['particles'] if 'particles' in kwargs else True
+	heatmap = kwargs['heatmap'] if 'heatmap' in kwargs else True
+	particles_layer = folium.FeatureGroup(name=layer_name + ": particles")
+	heatmap_layer = folium.FeatureGroup(name=layer_name + ": heatmap")
+	real_position = folium.FeatureGroup(name=layer_name + ": real position")
+
+	real_position.add_child(folium.CircleMarker(location=[real_pos[0],real_pos[1]],
+			fill=True,radius=10,
+			color='',
+			fill_color='red',
+			fill_opacity=1))
 
 	lat, lon, heat = ([] for i in range(3))
 	for idx, particle in particles_pd.iterrows():
@@ -184,8 +193,11 @@ def print_particles(particles_pd,layer_name):
 	htmp_data=list(zip(lat,lon,heat))
 	heatmap_layer.add_child(HeatMap(htmp_data,radius=25,blur=50,min_opacity=0.5,))
 
-	map.add_child(particles_layer)
-	map.add_child(heatmap_layer)
+	if particles:
+		map.add_child(particles_layer)
+	if heatmap:
+		map.add_child(heatmap_layer)
+	map.add_child(real_position)
 
 
 
