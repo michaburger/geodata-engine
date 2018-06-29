@@ -8,10 +8,11 @@ import datetime
 
 N_SAMPLE = 250
 CLUSTER_R = 30
-SPEED = 1.5 #m/s
+SPEED = 1 #m/s
 F_SAMPLING = 30 #seconds between 2 transmissions
-DISCARD = 0.3 #historical discard
-FLATTEN_PROBABILITY = 0.5 #take n-root after the min-max probability calculation
+DISCARD = 0.5 #historical discard
+MAX_AGE = 5 #discard points older than this
+FLATTEN_PROBABILITY = 1 #take n-root after the min-max probability calculation
 FIRST_VALUES = 10 #how many of the first guesses to consider
 
 pf_store = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
@@ -60,6 +61,7 @@ def create_time_series(validation, nb_meas):
 	for point in validation:
 		point_time = datetime.datetime.strptime(point['time'],TIME_FORMAT)
 		time_difference = point_time - last_time
+		#print(time_difference)
 		#if non concecutive transmission, start new serie
 		if(time_difference.total_seconds()>10 or len(current_serie)>=nb_meas):
 			if(len(current_serie)>=nb_meas):
@@ -73,7 +75,7 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 	render_map = kwargs['render_map'] if 'render_map' in kwargs else False 
 	metrics_probability = kwargs['metrics_probability'] if 'metrics_probability' in kwargs else True
 	best_classes = fp.cosine_similarity_classifier_knn(database,sample_feature_space,nncl,first_values=FIRST_VALUES,flatten=FLATTEN_PROBABILITY)
-	print(best_classes)
+	#print(best_classes)
 	global pf_store
 	particles = []
 	#for every cluster, sample p*N_SAMPLE points with random position inside cluster
@@ -89,6 +91,11 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 	new_particles = pd.DataFrame(data=particles,columns=['lat','lon','age','clat','clon'])
 
 	if pf_store.empty == False:
+		#remove old points
+		print(pf_store)
+		pf_store = pf_store.loc[pf_store['age']<=MAX_AGE]
+		print("***")
+		print(pf_store)
 		#resample historical data
 		pf_store = pf_store.sample(frac=1).reset_index(drop=True).loc[:int(pf_store.shape[0]*(1-DISCARD)),:]
 		pf_store['age'] = pf_store['age']+1
