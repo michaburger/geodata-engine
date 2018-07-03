@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import fingerprinting as fp
+import geopy.distance
 import mapping as mp
 import random
 import math
@@ -8,14 +9,17 @@ import datetime
 
 N_SAMPLE = 250
 CLUSTER_R = 30
-SPEED = 1 #m/s
+SPEED = 1.5 #m/s
 F_SAMPLING = 30 #seconds between 2 transmissions
-DISCARD = 0.5 #historical discard
-MAX_AGE = 5 #discard points older than this
-FLATTEN_PROBABILITY = 1 #take n-root after the min-max probability calculation
-FIRST_VALUES = 10 #how many of the first guesses to consider
+DISCARD = 0.25 #historical discard
+MAX_AGE = 5 #discard particles older than this
+FILTER_AGE = 3 #number of historical values to be used for filtering
+FLATTEN_PROBABILITY = 0.5 #take n-root after the min-max probability calculation
+FIRST_VALUES = 5 #how many of the first guesses to consider
+CLASSIFIER_FUNCTION = 'correlation' #euclidean, cosine or correlation
 
-pf_store = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
+pf_store_particles = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
+pf_store_clusters = pd.DataFrame(columns=['age','Probability','Lat','Lon'])
 
 #because geopy.distance doesn't offer an inverse function. 
 #Results compareable to geopy.distance.great_circle
@@ -72,11 +76,28 @@ def create_time_series(validation, nb_meas):
 	return all_series
 
 def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**kwargs):
+	global pf_store_particles
+	global pf_store_clusters
 	render_map = kwargs['render_map'] if 'render_map' in kwargs else False 
 	metrics_probability = kwargs['metrics_probability'] if 'metrics_probability' in kwargs else True
-	best_classes = fp.cosine_similarity_classifier_knn(database,sample_feature_space,nncl,first_values=FIRST_VALUES,flatten=FLATTEN_PROBABILITY)
+	best_classes = fp.similarity_classifier_knn(database,sample_feature_space,nncl,first_values=FIRST_VALUES,flatten=FLATTEN_PROBABILITY,function=CLASSIFIER_FUNCTION)
 	#print(best_classes)
-	global pf_store
+	#print(pf_store_clusters)
+
+	#resampling filter: remove new particles with impossible positions (too far away)
+	if pf_store_clusters.empty == False:
+		for idx, cluster in best_classes.iterrows():
+			discard = True
+			for idy, old_cluster in pf_store_clusters.iterrows():
+				distance = geopy.distance.vincenty((cluster['Lat'],cluster['Lon']),(old_cluster['Lat'],old_cluster['Lon'])).km*1000
+				if distance < CLUSTER_R+F_SAMPLING*SPEED*old_cluster['age']:
+					discard = False
+			#discard row if too far away from previous measures
+			if (discard):
+				best_classes.drop(index=idx,inplace=True)	
+				#print("Cluster {} dropped".format(idx))
+	print(best_classes)
+
 	particles = []
 	#for every cluster, sample p*N_SAMPLE points with random position inside cluster
 	for idx, line in best_classes.iterrows():
@@ -89,37 +110,32 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 			lat, lon = get_random_position(line.loc['Lat'],line.loc['Lon'],CLUSTER_R)
 			particles.append((lat,lon,0,line.loc['Lat'],line.loc['Lon']))
 	new_particles = pd.DataFrame(data=particles,columns=['lat','lon','age','clat','clon'])
+	new_clusters = best_classes.drop(['Cluster ID','Variance','Mean Similarity'],axis=1)
+	new_clusters['age']=0
 
-	if pf_store.empty == False:
+	if pf_store_particles.empty == False:
+		pf_store_particles['age'] = pf_store_particles['age']+1
+		pf_store_clusters['age'] = pf_store_clusters['age']+1
+
 		#remove old points
-		print(pf_store)
-		pf_store = pf_store.loc[pf_store['age']<=MAX_AGE]
-		print("***")
-		print(pf_store)
-		#resample historical data
-		pf_store = pf_store.sample(frac=1).reset_index(drop=True).loc[:int(pf_store.shape[0]*(1-DISCARD)),:]
-		pf_store['age'] = pf_store['age']+1
+		pf_store_particles = pf_store_particles.loc[pf_store_particles['age']<=MAX_AGE]
+		pf_store_clusters = pf_store_clusters.loc[pf_store_clusters['age']<=FILTER_AGE]
+
+		#resample historical data --> density of particles representing probability
+		pf_store_particles = pf_store_particles.sample(frac=1).reset_index(drop=True).loc[:int(pf_store_particles.shape[0]*(1-DISCARD)),:]
 
 		#increase past radius according to device velocity
-		for i, particle in pf_store.iterrows():
+		for i, particle in pf_store_particles.iterrows():
 			lat_dynamic, lon_dynamic = get_random_position(particle.loc['clat'],particle.loc['clon'],CLUSTER_R+F_SAMPLING*SPEED*age)
-			pf_store['lat'] = lat_dynamic
-			pf_store['lon'] = lon_dynamic
+			pf_store_particles['lat'] = lat_dynamic
+			pf_store_particles['lon'] = lon_dynamic
 
+	pf_store_clusters = pf_store_clusters.append(new_clusters,ignore_index=True)
+	pf_store_particles = pf_store_particles.append(new_particles,ignore_index=True)
 
-	pf_store = pf_store.append(new_particles,ignore_index=True)
-
-	mp.print_particles(pf_store,"t = {}".format(-1*age),real_pos,heatmap=True,particles=False)
-	return pf_store
-	#print(pf_store)
-
-
-
-
-
-	#TODO for dynamical algorithm: increase cluster size if speed != 0
-
-	#print current particle distribution for double check
+	mp.print_particles(pf_store_particles,"t = {}".format(-1*age),real_pos,heatmap=True,particles=False)
+	return pf_store_particles
+	#print(pf_store_particles)
 
 
 

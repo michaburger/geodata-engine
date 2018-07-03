@@ -259,11 +259,27 @@ def cosine_similarity(v1,v2):
 	dist = (2 - spatial.distance.cosine(v1,v2))/2.0
 	return dist
 
-def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
+def euclidean_similarity(v1,v2):
+	if len(v1) != len(v2):
+		print("ERROR: not same vector length in euclidean similarity function!")
+		return 0.0
+	dist = 1/spatial.distance.euclidean(v1,v2)
+	return dist
+
+def correlation_similarity(v1,v2):
+	if len(v1) != len(v2):
+		print("ERROR: not same vector length in correlation similarity function!")
+		return 0.0
+	dist = (2- spatial.distance.correlation(v1,v2))/2.0
+	return dist
+
+
+def similarity_classifier_knn(db, test, nncl, **kwargs):
 	metrics = kwargs['metrics'] if 'metrics' in kwargs else 'Label1'
 	idx = kwargs['idx'] if 'idx' in kwargs else 0
-	flatten = kwargs['flatten_proba'] if 'flatten_proba' in kwargs else 1.0
+	flatten = kwargs['flatten'] if 'flatten' in kwargs else 1.0
 	first_values = kwargs['first_values'] if 'first_values' in kwargs else 10
+	function = kwargs['function'] if 'function' in kwargs else 'cosine'
 
 	db_sparse = db.drop(columns=['cLat','cLon','rLat','rLon'])#,'Label1' if metrics == 'Label2' else 'Label2'])
 	test = test.drop(['cLat','cLon','rLat','rLon','Label1'])#,'Label2'])
@@ -276,7 +292,14 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 		row = row.drop(metrics)
 		#create vector
 		v1 = row.tolist()
-		sim[label].append(cosine_similarity(v1,v_test))
+		if(function == 'cosine'):
+			sim[label].append(cosine_similarity(v1,v_test))
+		elif(function == 'euclidean'):
+			sim[label].append(euclidean_similarity(v1,v_test))
+		elif(function == 'correlation'):
+			sim[label].append(correlation_similarity(v1,v_test))
+		else:
+			print("ERROR: Please specify a correct classification function. Accepted functions: 'cosine', 'euclidean', 'correlation'")
 
 	#list the most probable clusters with similarity index
 	cluster_sim = []
@@ -293,10 +316,12 @@ def cosine_similarity_classifier_knn(db, test, nncl, **kwargs):
 	warnings.filterwarnings("ignore")
 	#rescale and norm for the first 10 clusters --> probabilities
 	head = cluster_stat.head(first_values+1)
-	head['rescaled'] = ((head.loc[:,'Mean Similarity'] - head.loc[:,'Mean Similarity'].min()) / (head.loc[:,'Mean Similarity'].max()-head.loc[:,'Mean Similarity'].min()))**flatten
+	head['rescaled'] = ((head.loc[:,'Mean Similarity'] - head.loc[:,'Mean Similarity'].min()) / (head.loc[:,'Mean Similarity'].max()-head.loc[:,'Mean Similarity'].min()))**(1/flatten)
 	head['Probability'] = head.loc[:,'rescaled'] / head.loc[:,'rescaled'].sum()
 	head.drop(columns='rescaled',inplace=True)
 	head.drop(head.index[first_values],inplace=True) #drop last index with probability 0
+
+	print(head)
 
 	#add coordinates of center
 	center_coords = []
