@@ -214,20 +214,20 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
-					arr = [-1*p['Gateways'][eui][0],40*p['Gateways'][eui][1],200*p['Gateways'][eui][2]]
+					arr = [p['Gateways'][eui][0],p['Gateways'][eui][1],p['Gateways'][eui][2]]
 					tensor.append(arr)
 				else:
-					tensor.append([200,0,0])#put 200dBm as placeholder for "far away"
+					tensor.append([-200,0,0])#put 200dBm as placeholder for "far away"
 			compilation_train.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 		for p in trk_dict_test:
 			tensor = []
 			for eui in gateway_ref:
 				if eui in p['Gateways']:
-					arr = [-1*p['Gateways'][eui][0],40*p['Gateways'][eui][1],200*p['Gateways'][eui][2]]
+					arr = [p['Gateways'][eui][0],p['Gateways'][eui][1],p['Gateways'][eui][2]]
 					tensor.append(arr)
 				else:
-					tensor.append([200,0,0])
+					tensor.append([-200,0,0])
 			compilation_test.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 	#create random order
