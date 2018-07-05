@@ -251,6 +251,11 @@ print("Clustering files generated!")
 
 #import pre-computed dataset
 dataset = pd.read_csv("dataset.csv")
+print(dataset)
+dataset_antwerp = pd.read_csv("lorawan_dataset_antwerp.csv")
+print(dataset_antwerp)
+
+'''
 cfile = open("clsize.mikka","r")
 nb_clusters = int(cfile.read())
 cfile.close()
@@ -335,7 +340,7 @@ print("]")
 print("Mean error to estimation: {}m".format(np.mean(dist_errors)))
 print("Particle mean error: {}m".format(np.mean(particle_errors)))
 print("Particle map rendered!")
-
+'''
 
 '''
 #13.6.2018 test accuracy by adding distance error to best classes pandas table
