@@ -207,7 +207,7 @@ MEAS_REDUCT_DYNAMIC = 1.0 #how many of the measurement points for feature space 
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
 #gtws = gateway_list_track(db.request_track(21,0,7,'ALL',500))
 
-'''
+
 nb_gtws = len(gtws)
 clustering_database = db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00")
 
@@ -246,7 +246,7 @@ gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
 print("Clustering files generated!")
-'''
+
 
 
 #import pre-computed dataset
