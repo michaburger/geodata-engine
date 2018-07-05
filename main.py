@@ -178,10 +178,10 @@ mapping.add_gateway_layer(db.request_gateways(25))
 
 #Add Track 1 as a point layer
 #gtws = ['0B030153','080E0FF3','080E04C4','080E1007','080E05AD','080E0669','080E0D73','080E1006','080E0D61', '004A0DB4']
-gtws = gateway_list_track(db.request_track(20,0,7,'ALL',250,"2018-04-27_11:00:00"))
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-07-04_14:00:00"))
 
 for cnt, g in enumerate(gtws):
-	mapping.add_point_layer(db.request_track(20,0,7,'ALL',250,"2018-04-27_11:00:00"),gtws[cnt],gtws[cnt],3,500)
+	mapping.add_point_layer(db.request_track(20,0,7,'ALL',500,"2018-07-04_14:00:00"),gtws[cnt],gtws[cnt],3,500)
 	#geo.distance_list(db.request_gateways(30),db.request_track(6, start="2018-03-20_00:00:00"),gtws[cnt],6)
 
 #mapping.add_point_layer(db.request_track(1),"3 satellites",3,500)
@@ -192,7 +192,6 @@ for cnt, g in enumerate(gtws):
 #output map
 mapping.output_map('maps/track20.html')
 '''
-
 
 
 #4.5.2018 - Clustering
@@ -210,14 +209,14 @@ gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00
 
 '''
 nb_gtws = len(gtws)
-clustering_test_track = db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00")
+clustering_database = db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00")
 
 #have around 10-30 points per cluster. This is a parameter to optimize
-nb_clusters = int(len(clustering_test_track)/int(CLUSTER_SIZE*N_MEAS*2))
+nb_clusters = int(len(clustering_database)/int(CLUSTER_SIZE*N_MEAS*2))
 print("Number of clusters: {}".format(nb_clusters))
 
 #Agglomerative clustering
-set_with_clusters = cl.distance_clustering_agglomerative(clustering_test_track,nb_clusters=nb_clusters,min_points=int(MIN_PTS_MULT*N_MEAS))
+set_with_clusters = cl.distance_clustering_agglomerative(clustering_database,nb_clusters=nb_clusters,min_points=int(MIN_PTS_MULT*N_MEAS))
 
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
@@ -293,6 +292,8 @@ database, testing = cl.normalize_data(database,testing)
 #validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_11:00:00","2018-06-15_13:00:00") #static measures on Place Cosanday for this date
 validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_14:00:00","2018-06-15_16:00:00") #dynamic measures on EPFL campus
 #validation_track = db.request_track(51,0,7,'ALL',500,"2018-06-28_09:00:00","2018-06-28_14:00:00") #dynamic measures with stops during packet transmission
+#validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:00:00","2018-07-04_15:40:00") #static measures in front of Rolex. Set speed = 0!
+#validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:40:00","2018-07-04_16:30:00") #dynamic measures, stops during transmission. 20s between packet series, speed 1.5m/s
 validation_track_array = pf.create_time_series(validation_track,int(N_MEAS*MEAS_REDUCT_DYNAMIC))
 #static_validation_coords = (46.518313, 6.566825)
 #validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date
@@ -304,6 +305,8 @@ print("[",end="")
 for i in range(len(validation_track_array)):
 	print("-",end="")
 print("]\n[",end="")
+particle_errors = []
+dist_errors = []
 for i, track in enumerate(validation_track_array):
 	validation_cluster = cl.distance_clustering_agglomerative(track,nb_clusters=1,min_points=int(N_MEAS*MEAS_REDUCT_DYNAMIC)) #create only one cluster (static)
 	validation_cluster = cl.cluster_split(validation_cluster,1)
@@ -321,9 +324,16 @@ for i, track in enumerate(validation_track_array):
 		lon_arr.append(point['gps_lon'])
 	real_pos = np.mean(lat_arr),np.mean(lon_arr)
 	dist = pf.get_particle_distribution(validation_normed.loc[1],database,nncl,(len(validation_track_array)-(i+1)),real_pos)
+	particle_error,distance_error = pf.get_mean_error(dist,real_pos)
+	particle_errors.append(particle_error)
+	dist_errors.append(distance_error)
+	print("Distance to estimation: {}m".format(distance_error))
+	print("Particle mean error: {}m".format(particle_error))
 	print("-",end='',flush=True)
 mapping.output_map("maps/particles.html")
 print("]")
+print("Mean error to estimation: {}m".format(np.mean(dist_errors)))
+print("Particle mean error: {}m".format(np.mean(particle_errors)))
 print("Particle map rendered!")
 
 

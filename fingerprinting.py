@@ -217,7 +217,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 					arr = [-1*p['Gateways'][eui][0],40*p['Gateways'][eui][1],200*p['Gateways'][eui][2]]
 					tensor.append(arr)
 				else:
-					tensor.append([0,0,0])
+					tensor.append([200,0,0])#put 200dBm as placeholder for "far away"
 			compilation_train.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 		for p in trk_dict_test:
@@ -227,7 +227,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 					arr = [-1*p['Gateways'][eui][0],40*p['Gateways'][eui][1],200*p['Gateways'][eui][2]]
 					tensor.append(arr)
 				else:
-					tensor.append([0,0,0])
+					tensor.append([200,0,0])
 			compilation_test.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 	#create random order
@@ -263,7 +263,7 @@ def euclidean_similarity(v1,v2):
 	if len(v1) != len(v2):
 		print("ERROR: not same vector length in euclidean similarity function!")
 		return 0.0
-	dist = 1/spatial.distance.euclidean(v1,v2)
+	dist = (1/spatial.distance.euclidean(v1,v2))*len(v1)*5
 	return dist
 
 def correlation_similarity(v1,v2):
@@ -271,6 +271,13 @@ def correlation_similarity(v1,v2):
 		print("ERROR: not same vector length in correlation similarity function!")
 		return 0.0
 	dist = (2- spatial.distance.correlation(v1,v2))/2.0
+	return dist
+
+def manhattan_similarity(v1,v2):
+	if len(v1) != len(v2):
+		print("ERROR: not same vector length in manhattan similarity function!")
+		return 0.0
+	dist = (1/spatial.distance.cityblock(v1,v2))*len(v1)*len(v2)/2
 	return dist
 
 
@@ -298,8 +305,10 @@ def similarity_classifier_knn(db, test, nncl, **kwargs):
 			sim[label].append(euclidean_similarity(v1,v_test))
 		elif(function == 'correlation'):
 			sim[label].append(correlation_similarity(v1,v_test))
+		elif(function == 'manhattan'):
+			sim[label].append(manhattan_similarity(v1,v_test))
 		else:
-			print("ERROR: Please specify a correct classification function. Accepted functions: 'cosine', 'euclidean', 'correlation'")
+			print("ERROR: Please specify a correct classification function. Accepted functions: 'cosine', 'euclidean', 'manhattan', correlation'")
 
 	#list the most probable clusters with similarity index
 	cluster_sim = []

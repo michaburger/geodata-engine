@@ -11,12 +11,12 @@ N_SAMPLE = 250
 CLUSTER_R = 30
 SPEED = 1.5 #m/s
 F_SAMPLING = 30 #seconds between 2 transmissions
-DISCARD = 0.25 #historical discard
+DISCARD = 0.5 #historical discard
 MAX_AGE = 5 #discard particles older than this
-FILTER_AGE = 3 #number of historical values to be used for filtering
-FLATTEN_PROBABILITY = 0.5 #take n-root after the min-max probability calculation
-FIRST_VALUES = 5 #how many of the first guesses to consider
-CLASSIFIER_FUNCTION = 'correlation' #euclidean, cosine or correlation
+FILTER_AGE = 2 #number of historical values to be used for filtering
+FLATTEN_PROBABILITY = 0.3 #take n-root after the min-max probability calculation
+FIRST_VALUES = 10 #how many of the first guesses to consider
+CLASSIFIER_FUNCTION = 'cosine' #euclidean, cosine, manhattan or correlation
 
 pf_store_particles = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
 pf_store_clusters = pd.DataFrame(columns=['age','Probability','Lat','Lon'])
@@ -96,7 +96,6 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 			if (discard):
 				best_classes.drop(index=idx,inplace=True)	
 				#print("Cluster {} dropped".format(idx))
-	print(best_classes)
 
 	particles = []
 	#for every cluster, sample p*N_SAMPLE points with random position inside cluster
@@ -136,6 +135,18 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 	mp.print_particles(pf_store_particles,"t = {}".format(-1*age),real_pos,heatmap=True,particles=False)
 	return pf_store_particles
 	#print(pf_store_particles)
+
+#returns mean particle error (the mean distance particle-real point for all particles) and error distance to estimate
+#(distance mean coordinates of particles - real point)
+def get_mean_error(pd_distribution, real_pos):
+	distances = []
+	lat = []
+	lon = []
+	for idx, particle in pd_distribution.iterrows():
+		distances.append(geopy.distance.vincenty((particle['lat'],particle['lon']),real_pos).km*1000)
+		lat.append(particle['lat'])
+		lon.append(particle['lon'])
+	return np.mean(distances),geopy.distance.vincenty((np.mean(lat),np.mean(lon)),real_pos).km*1000
 
 
 
