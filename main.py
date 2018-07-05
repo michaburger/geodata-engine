@@ -207,7 +207,7 @@ MEAS_REDUCT_DYNAMIC = 1.0 #how many of the measurement points for feature space 
 gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
 #gtws = gateway_list_track(db.request_track(21,0,7,'ALL',500))
 
-
+'''
 nb_gtws = len(gtws)
 clustering_database = db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00")
 
@@ -246,7 +246,7 @@ gfile = open("gtwnb.mikka","w")
 gfile.write(str(nb_gtws))
 gfile.close()
 print("Clustering files generated!")
-
+'''
 
 
 #import pre-computed dataset
@@ -290,10 +290,10 @@ database, testing = cl.normalize_data(database,testing)
 
 #create real test feature space from STATIC validation track
 #validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_11:00:00","2018-06-15_13:00:00") #static measures on Place Cosanday for this date
-validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_14:00:00","2018-06-15_16:00:00") #dynamic measures on EPFL campus
+#validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_14:00:00","2018-06-15_16:00:00") #dynamic measures on EPFL campus
 #validation_track = db.request_track(51,0,7,'ALL',500,"2018-06-28_09:00:00","2018-06-28_14:00:00") #dynamic measures with stops during packet transmission
 #validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:00:00","2018-07-04_15:40:00") #static measures in front of Rolex. Set speed = 0!
-#validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:40:00","2018-07-04_16:30:00") #dynamic measures, stops during transmission. 20s between packet series, speed 1.5m/s
+validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:40:00","2018-07-04_16:30:00") #dynamic measures, stops during transmission. 20s between packet series, speed 1.5m/s
 validation_track_array = pf.create_time_series(validation_track,int(N_MEAS*MEAS_REDUCT_DYNAMIC))
 #static_validation_coords = (46.518313, 6.566825)
 #validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date

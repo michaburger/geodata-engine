@@ -13,10 +13,10 @@ SPEED = 1.5 #m/s
 F_SAMPLING = 30 #seconds between 2 transmissions
 DISCARD = 0.5 #historical discard
 MAX_AGE = 5 #discard particles older than this
-FILTER_AGE = 2 #number of historical values to be used for filtering
-FLATTEN_PROBABILITY = 0.3 #take n-root after the min-max probability calculation
-FIRST_VALUES = 10 #how many of the first guesses to consider
-CLASSIFIER_FUNCTION = 'cosine' #euclidean, cosine, manhattan or correlation
+FILTER_AGE = 3 #number of historical values to be used for filtering
+FLATTEN_PROBABILITY = 0.5 #take n-root after the min-max probability calculation
+FIRST_VALUES = 5 #how many of the first guesses to consider
+CLASSIFIER_FUNCTION = 'euclidean' #euclidean, cosine, manhattan or correlation
 
 pf_store_particles = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
 pf_store_clusters = pd.DataFrame(columns=['age','Probability','Lat','Lon'])
