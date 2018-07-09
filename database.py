@@ -1,6 +1,7 @@
 import urllib.request
 from urllib.error import URLError, HTTPError
 import datetime as dt
+import pandas as pd
 import json
 import time
 
@@ -75,3 +76,41 @@ def add_gateway(eui,lat,lon):
 			print("URLError in trial {}".format(i))
 			time.sleep(60)
 	return "[]"
+
+#transform external data to python dict to imitate it came directly from the server
+def transform_antwerp(data_pd):
+	track_list = []
+	NB_BASE_STATIONS = 68
+
+	for idx, row in data_pd.iterrows():
+		#only import SF7 for the moment
+		if row["'SF'"] == 7:
+			p_dict = {'humidity': 0.0, 'gps_speed': 0.0, 'devEUI': 'ANTWERP', 'track_ID': 0, 'temperature': 0.0, 'sub_band': 'n/a', 'tx_pow': 0, 'channel': 'n/a', 'gps_sat': 5, 'deviceType': 'ANTWERP', 'gps_course':0}
+			p_dict['time'] = row["'RX Time'"][1:-1] #rip off the simple quotes
+			p_dict['gps_hdop'] = int(100*row["'HDOP'"])
+			p_dict['sp_fact'] = row["'SF'"]
+			p_dict['gps_lat'] = row["'Latitude'"]
+			p_dict['gps_lon'] = row["'Longitude'"]
+			p_dict['timestamp'] = {'$date': 0}
+
+
+			gtw_id = []
+			rssi = []
+			snr = []
+			esp = []
+			for bs in range(1,NB_BASE_STATIONS+1):
+				if row["'BS {}'".format(bs)] > -200:
+					rssi_val = row["'BS {}'".format(bs)]
+					gtw_id.append("BS {}".format(bs))
+					snr.append(0)
+					rssi.append(rssi_val)
+					esp.append(rssi_val)
+			p_dict['gateway_rssi'] = rssi
+			p_dict['gateway_snr'] = snr
+			p_dict['gateway_esp'] = esp
+			p_dict['gateway_id'] = gtw_id
+
+			track_list.append(p_dict)
+	return track_list
+
+
