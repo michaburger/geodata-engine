@@ -46,7 +46,7 @@ def add_circle_layer(circle_data, ref_point):
 			popup= "Gateway: " + str(crl['EUI']) + "<br/>" +
 					"-3Sigma"
 			))
-			
+
 
 	#add trilateration point
 	circle_layer.add_child(folium.Marker(location=coord_list[ref_point-3],popup="Ref point: "+str(ref_point),icon=folium.Icon(color='darkred',prefix='fa',icon='angle-double-down')))
@@ -230,7 +230,7 @@ def add_point_layer(pts, layerName='PointLayer', gateway= '0B030153', minSatelli
 				cluster.append(str(trk['track_ID']))
 				
 				#used for the color
-				heat.append((int)(-1*trk['gateway_rssi'][i]))
+				heat.append((int)(trk['gateway_rssi'][i]))
 
 	for lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat,cluster in zip(lat,lon,time,timest,dev,hum,temp,sp,gps_sat,gps_hdop,gateways,rssi,snr,esp,heat,cluster):
 		#print("heat: "+str(heat)+", color: "+pick_color(heat))
