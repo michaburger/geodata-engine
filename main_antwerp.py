@@ -220,7 +220,6 @@ print("Number of clusters: {}".format(nb_clusters))
 #Agglomerative clustering
 set_with_clusters = cl.distance_clustering_agglomerative(clustering_database,nb_clusters=nb_clusters,min_points=int(MIN_PTS_MULT*N_MEAS))
 
-print(set_with_clusters[1])
 #DBSCAN clustering
 #set_with_clusters, nb_clusters = cl.distance_clustering_dbscan(clustering_test_track,max_unlabeled=0.05)
 

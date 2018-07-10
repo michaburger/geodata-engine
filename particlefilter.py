@@ -7,18 +7,21 @@ import random
 import math
 import datetime
 
-N_SAMPLE = 250
-CLUSTER_R = 30
-SPEED = 1.5 #m/s
-F_SAMPLING = 30 #seconds between 2 transmissions
-DISCARD = 0.5 #historical discard
+N_SAMPLE = 200
+CLUSTER_R = 50
+SPEED = 1.0 #m/s
+SPEED_DISCARD = 1.0 #m/s. To discard impossible points
+F_SAMPLING = 60 #seconds between 2 transmissions
+DISCARD = 1.0 #historical discard
 MAX_AGE = 5 #discard particles older than this
 FILTER_AGE = 3 #number of historical values to be used for filtering
-FLATTEN_PROBABILITY = 0.5 #take n-root after the min-max probability calculation
-FIRST_VALUES = 5 #how many of the first guesses to consider
+DYNAMICAL_FILTER_ON = True
+MIN_OCCURR_PERCENT = 5 #minimum occurrency of a certain cluster in the historical particles. clusters with less occurrency will be deleted for noise.
+FLATTEN_PROBABILITY = 0.3 #take n-root after the min-max probability calculation
+FIRST_VALUES = 20 #how many of the first guesses to consider
 CLASSIFIER_FUNCTION = 'euclidean' #euclidean, cosine, manhattan or correlation
 
-pf_store_particles = pd.DataFrame(columns=['lat','lon','age','clat','clon'])
+pf_store_particles = pd.DataFrame(columns=['lat','lon','age','cluster','clat','clon'])
 pf_store_clusters = pd.DataFrame(columns=['age','Probability','Lat','Lon'])
 
 #because geopy.distance doesn't offer an inverse function. 
@@ -85,12 +88,20 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 	#print(pf_store_clusters)
 
 	#resampling filter: remove new particles with impossible positions (too far away)
-	if pf_store_clusters.empty == False:
-		for idx, cluster in best_classes.iterrows():
+	if DYNAMICAL_FILTER_ON and pf_store_clusters.empty == False:
+
+		#remove low-density particle noise
+		counts = pf_store_particles['cluster'].value_counts(normalize=True,dropna=False)
+		drop_clusters = counts.index[counts<0.01*MIN_OCCURR_PERCENT].tolist()
+		for i, line in pf_store_particles.iterrows():
+			if(line['cluster'] in drop_clusters):
+				pf_store_particles.drop(index=i,inplace=True)
+
+		for idx, cluster in best_classes.iterrows():			
 			discard = True
 			for idy, old_cluster in pf_store_clusters.iterrows():
 				distance = geopy.distance.vincenty((cluster['Lat'],cluster['Lon']),(old_cluster['Lat'],old_cluster['Lon'])).km*1000
-				if distance < CLUSTER_R+F_SAMPLING*SPEED*old_cluster['age']:
+				if distance < CLUSTER_R+F_SAMPLING*SPEED_DISCARD*old_cluster['age']:
 					discard = False
 			#discard row if too far away from previous measures
 			if (discard):
@@ -107,8 +118,8 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 		#print("Cluster {}, Generating {} particles".format(idx,nb_particles))
 		for p in range(nb_particles):
 			lat, lon = get_random_position(line.loc['Lat'],line.loc['Lon'],CLUSTER_R)
-			particles.append((lat,lon,0,line.loc['Lat'],line.loc['Lon']))
-	new_particles = pd.DataFrame(data=particles,columns=['lat','lon','age','clat','clon'])
+			particles.append((lat,lon,0,line.loc['Cluster ID'],line.loc['Lat'],line.loc['Lon']))
+	new_particles = pd.DataFrame(data=particles,columns=['lat','lon','age','cluster','clat','clon'])
 	new_clusters = best_classes.drop(['Cluster ID','Variance','Mean Similarity'],axis=1)
 	new_clusters['age']=0
 
@@ -117,7 +128,7 @@ def get_particle_distribution(sample_feature_space,database,nncl,age,real_pos,**
 		pf_store_clusters['age'] = pf_store_clusters['age']+1
 
 		#remove old points
-		pf_store_particles = pf_store_particles.loc[pf_store_particles['age']<=MAX_AGE]
+		pf_store_particles = pf_store_particles.loc[pf_store_particles['age']<=MAX_AGE+1]
 		pf_store_clusters = pf_store_clusters.loc[pf_store_clusters['age']<=FILTER_AGE]
 
 		#resample historical data --> density of particles representing probability

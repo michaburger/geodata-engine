@@ -197,14 +197,14 @@ mapping.output_map('maps/track20.html')
 #4.5.2018 - Clustering
 
 #parameters
-D_SIZE = 100
+D_SIZE = 10
 N_MEAS = 12
-CLUSTER_SIZE = 2 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
-MIN_PTS_MULT = 1.5 #clusters with less than this value times N_MEAS points will be discarded
+CLUSTER_SIZE = 1.5 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
+MIN_PTS_MULT = 0.75 #clusters with less than this value times N_MEAS points will be discarded
 MEAS_REDUCT_DYNAMIC = 1.0 #how many of the measurement points for feature space creation space will be reduced for the dynamic algorithm
 
 #only take into account the gateways seen in the defined time period. Don't accept gateways built afterwards.
-gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00","2018-05-31_00:00:00"))
+gtws = gateway_list_track(db.request_track(20,0,7,'ALL',500,"2018-04-27_11:00:00"))#,"2018-05-31_00:00:00"))
 #gtws = gateway_list_track(db.request_track(21,0,7,'ALL',500))
 
 '''
@@ -225,9 +225,9 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 
 #draw map
-#for cnt, g in enumerate(gtws):
-#	mapping.add_point_layer(set_with_clusters,g,g,3,500,coloring='clusters')
-#mapping.output_map('maps/clustering-map-agglomerative-full.html')
+for cnt, g in enumerate(gtws):
+	mapping.add_point_layer(set_with_clusters,g,g,3,500,coloring='clusters')
+mapping.output_map('maps/epfl-07-09.html')
 
 
 #9.5.2018 - Applying PCA
@@ -273,7 +273,6 @@ clusters = dataset #not performing 2nd clustering at the moment
 
 
 
-
 #clusters = pd.read_csv("data/clusters_jaccard_raw-{}-{}-{}.csv".format(D_SIZE,N_MEAS,int(CL_SIZE*100)))
 
 cfile = open("clsize.mikka","r")
@@ -293,7 +292,8 @@ database, testing = cl.normalize_data(database,testing)
 #validation_track = db.request_track(50,0,7,'ALL',500,"2018-06-15_14:00:00","2018-06-15_16:00:00") #dynamic measures on EPFL campus
 #validation_track = db.request_track(51,0,7,'ALL',500,"2018-06-28_09:00:00","2018-06-28_14:00:00") #dynamic measures with stops during packet transmission
 #validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:00:00","2018-07-04_15:40:00") #static measures in front of Rolex. Set speed = 0!
-validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:40:00","2018-07-04_16:30:00") #dynamic measures, stops during transmission. 20s between packet series, speed 1.5m/s
+#validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-04_15:40:00","2018-07-04_16:30:00") #dynamic measures, stops during transmission. 20s between packet series, speed 1.5m/s
+validation_track = db.request_track(50,0,7,'ALL',500,"2018-07-09_15:00:00","2018-07-09_17:00:00") #dynamic measures, no stops during transmission. Cycling at walking speed.
 validation_track_array = pf.create_time_series(validation_track,int(N_MEAS*MEAS_REDUCT_DYNAMIC))
 #static_validation_coords = (46.518313, 6.566825)
 #validation_track_static = db.request_track(50,0,7,'ALL',500,"2018-06-12_17:20:00","2018-06-12_17:30:00") #static measures on Innovation Park for this date
@@ -327,14 +327,17 @@ for i, track in enumerate(validation_track_array):
 	particle_error,distance_error = pf.get_mean_error(dist,real_pos)
 	particle_errors.append(particle_error)
 	dist_errors.append(distance_error)
-	print("Distance to estimation: {}m".format(distance_error))
-	print("Particle mean error: {}m".format(particle_error))
+	#print("Distance to estimation: {}m".format(distance_error))
+	#print("Particle mean error: {}m".format(particle_error))
 	print("-",end='',flush=True)
 mapping.output_map("maps/particles.html")
 print("]")
-print("Mean error to estimation: {}m".format(np.mean(dist_errors)))
-print("Particle mean error: {}m".format(np.mean(particle_errors)))
 print("Particle map rendered!")
+print("Mean error to estimation: {}m".format(np.mean(dist_errors)))
+print("Median error to estimation: {}m".format(np.median(dist_errors)))
+print("90% percentile error to estimation: {}m".format(np.percentile(dist_errors,90)))
+print("Particle mean error: {}m".format(np.mean(particle_errors)))
+
 
 
 '''

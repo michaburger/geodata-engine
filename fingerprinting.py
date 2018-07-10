@@ -330,7 +330,7 @@ def similarity_classifier_knn(db, test, nncl, **kwargs):
 	head.drop(columns='rescaled',inplace=True)
 	head.drop(head.index[first_values],inplace=True) #drop last index with probability 0
 
-	print(head)
+	#print(head)
 
 	#add coordinates of center
 	center_coords = []
