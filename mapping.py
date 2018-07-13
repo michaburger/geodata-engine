@@ -10,7 +10,7 @@ coord_list = [(46.520312, 6.565633),(46.519374, 6.569038),(46.517747, 6.569007),
 color_list = []
 
 #init map
-map = folium.Map(location=[46.52, 6.565],zoom_start=16,tiles='stamentoner')
+map = folium.Map(location=[46.52, 6.565],zoom_start=17,tiles='stamentoner')
 folium.TileLayer(tiles='openstreetmap').add_to(map)
 
 def add_circle_layer(circle_data, ref_point):

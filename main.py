@@ -193,11 +193,10 @@ for cnt, g in enumerate(gtws):
 mapping.output_map('maps/track20.html')
 '''
 
-
 #4.5.2018 - Clustering
 
 #parameters
-D_SIZE = 10
+D_SIZE = 10 #dataset size per cluster
 N_MEAS = 12
 CLUSTER_SIZE = 1.5 #multiplier for how many times the measurement points have to be available in every first cluster. Less than 1 or 1: Overfit
 MIN_PTS_MULT = 0.75 #clusters with less than this value times N_MEAS points will be discarded
@@ -225,9 +224,9 @@ cluster_array = cl.cluster_split(set_with_clusters,nb_clusters)
 
 
 #draw map
-for cnt, g in enumerate(gtws):
-	mapping.add_point_layer(set_with_clusters,g,g,3,500,coloring='clusters')
-mapping.output_map('maps/epfl-07-09.html')
+#for cnt, g in enumerate(gtws):
+#	mapping.add_point_layer(set_with_clusters,g,g,3,500,coloring='clusters')
+#mapping.output_map('maps/lausanne-07-13-18.html')
 
 
 #9.5.2018 - Applying PCA
@@ -327,8 +326,8 @@ for i, track in enumerate(validation_track_array):
 	particle_error,distance_error = pf.get_mean_error(dist,real_pos)
 	particle_errors.append(particle_error)
 	dist_errors.append(distance_error)
-	#print("Distance to estimation: {}m".format(distance_error))
-	#print("Particle mean error: {}m".format(particle_error))
+	print("Distance to estimation: {}m".format(distance_error))
+	print("Particle mean error: {}m".format(particle_error))
 	print("-",end='',flush=True)
 mapping.output_map("maps/particles.html")
 print("]")
