@@ -1,3 +1,13 @@
+"""
+Author: Micha Burger, 24.07.2018
+https://micha-burger.ch
+LoRaWAN Localization algorithm used for Master Thesis 
+
+This file is containing all the Machine Learning methods
+for classification and research of the best class. Also
+the old and now unused methods like Neuronal Networks
+with Tensorflow are included.
+"""
 
 import numpy as np
 import pandas as pd
@@ -19,17 +29,82 @@ import warnings
 
 comparison_datasets=[]
 
+def get_gateways(track_array):
+	"""Get a list of all the gateway EUIs seen by this track.
+
+    Args:
+        track_array (array): 	Array containing arrays of python dict
+        						with each track information
+
+    Returns:
+        array of string: array of all gateway EUIs
+    """
+	gtws = []
+
+	for trk in track_array:
+		for i in range(len(trk)):
+			for gtw in trk[i]['gateway_id']:
+				if gtw not in gtws:
+					gtws.append(gtw)
+	return gtws
+
+def gateway_list_track(track):
+	"""Used to feed a single track into a track array used by get_gateways
+
+    Args:
+        track (dict): 	python dict containing one single track
+
+    Returns:
+        array of string: array of all gateway EUIs
+    """
+	trk_array = []
+	trk_array.append(track)
+	return get_gateways(trk_array)
+
 def hexcol(col):
+	"""Reformat color by removing '0x' from the string
+
+    Args:
+        col (string): 	python dict containing one single track
+
+    Returns:
+        string: exactly 2 digits in a string representing RGB
+    """
 	hexstr = str(hex(col).replace('0x',''))
 	if col <16:
 		return '0'+ hexstr
 	else:
 		return hexstr
+
+
 def random_color():
+	"""Generate a random color
+
+    Args:
+        void
+
+    Returns:
+        string: random RGB color in the format #rrggbb
+    """
 	return '#'+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))+hexcol(random.randint(0,255))
 
-#apply PCA and return pandas table. When nb_dim > 0, show the first n dimensions on a plot.
+#apply PCA and return pandas table. When nb_dim > 0, 
+#show the first n dimensions on a plot.
 def apply_pca(d,nb_clusters,nb_dim):
+	"""Apply PCA and return table in pandas format. Plot the first nb_dim
+	dimensions on a graph for visualization.
+
+	PCA was used to have a closer look at the nature of the dataset and the
+	geoclusters if they could be seperated somehow. It is not used any more
+	for the last version of the final algorithm.
+
+    Args:
+        d (tuple): 	(dataset,labels) in arrays of float / int
+
+
+    Returns:
+        pandas df: pandas dataframe with the result of the PCA
+    """
 	dataset = np.array(d[0])
 	labels = np.array(d[1])
 
@@ -81,22 +156,46 @@ def apply_pca(d,nb_clusters,nb_dim):
 	#print(pca.explained_variance_ratio_)
 	return finalDf
 
-def create_comparison_set(d_size,nb_measures):
-	for trk_comp in range(3,12):
-		comparison_datasets.append(create_dataset(db.request_track(trk_comp),dataset_size=d_size,nb_measures=nb_measures))
+def create_dataset_pandas(track_array, gateway_ref, **kwargs):
+	"""Create a dataset from a track array (usually clusters) and bring it 
+	into pandas dataframe feature-space format. 
 
-#tf.enable_eager_execution()
+	The function supports a test-train ratio. This creates two completely 
+	different datasets by splitting the points. The points of a track must already
+	be in a random order for this.
 
-def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
-	'''
-	@summary: Creates a random sample dataset from track data
-	@param track: the input track array
-	@param gateway_ref: Reference gateway array, the output will be according to this order
-	@kwargs dataset_size: how many points the dataset will contain per track. 
-							The total dataset size is dataset_size * nb_tracks
-	@kwargs nb_measures: over how many random points a dataset item is generated
-	@result: (dataset in tf format, track id as labels)
-	'''
+	A track is normally used here for storing one entire geo-cluster. Using the 
+	list of reference gateways, we determine how many times the gateway has been
+	seen from points of this cluster. This gateway frequency is stored together with 
+	the mean and variance of ESP for each gateway. If a gateway has not been seen, 
+	we use 0 as a placeholder. This creates a matrix of N x 3 values, N being the
+	number of gateways in gateway_ref.
+
+	Multiple datasets can be created for every cluster, normally there are more points
+	per cluster than nb_measures. This allows to create different datasets with slight 
+	random variations to represent the entire palette of possibilities inside a cluster.
+
+	The function returns a pandas dataframe containing the feature spaces together with 
+	its coordinates and cluster ID (Label). rLat,rLon represent the coordinates of a point
+	randomly chosen inside the cluster. This is used for generating a map with the dataset 
+	without ending up with the cluster data all on the same point. cLat,cLon represent
+	the center coordinates of the corresponding cluster
+
+
+    Args:
+        track_array (string):		Array containing the clusters as python dict
+        gateway_ref (array):		Array containing all the reference gateways as string
+        kwargs dataset_size (int):	Number of feature spaces to generate per cluster (track)
+        kwargs nb_measures (int):	Number of points per feature space
+        kwargs train_test (float):	Train-Test ratio between 0 and 1
+        kwargs offset (int):		If the track IDs have an offset, e.g. starting with 3
+        							like they did for the trilateration measures.
+
+
+    Returns:
+        tuple (pandas df, pandas df): two pandas datasets with size according to test-train ratio
+    """
+	
 	#Set default values
 	dataset_size = 20 # per track!
 	nb_measures = 10
@@ -122,7 +221,7 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 	df_train = pd.DataFrame()
 	df_test = pd.DataFrame()
 
-	for track in track_array_json:
+	for track in track_array:
 		#for every track we need to have some points which are only training and some distinct other points for testing
 		track_train = track[:int(train_test*len(track))]
 		track_test = track[int(train_test*len(track)):]
@@ -168,16 +267,50 @@ def create_dataset_pandas(track_array_json, gateway_ref, **kwargs):
 
 	return df_train,df_test
 
-def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
-	'''
-	@summary: Creates a random sample dataset from track data
-	@param track: the input track array
-	@param gateway_ref: Reference gateway array, the output will be according to this order
-	@kwargs dataset_size: how many points the dataset will contain per track. 
-							The total dataset size is dataset_size * nb_tracks
-	@kwargs nb_measures: over how many random points a dataset item is generated
-	@result: (dataset in tf format, track id as labels)
-	'''
+def create_dataset_tf(track_array, gateway_ref, **kwargs):
+	"""Create a dataset from a track array (usually clusters) and bring it 
+	into pandas dataframe feature-space format. 
+
+	Difference to create_dataset: This function creates a tuple with data and 
+	labels, ready to be used by a Tensorflow NN.
+
+	The function supports a test-train ratio. This creates two completely 
+	different datasets by splitting the points. The points of a track must already
+	be in a random order for this.
+
+	A track is normally used here for storing one entire geo-cluster. Using the 
+	list of reference gateways, we determine how many times the gateway has been
+	seen from points of this cluster. This gateway frequency is stored together with 
+	the mean and variance of ESP for each gateway. If a gateway has not been seen, 
+	we use 0 as a placeholder. This creates a matrix of N x 3 values, N being the
+	number of gateways in gateway_ref.
+
+	Multiple datasets can be created for every cluster, normally there are more points
+	per cluster than nb_measures. This allows to create different datasets with slight 
+	random variations to represent the entire palette of possibilities inside a cluster.
+
+	The function returns a pandas dataframe containing the feature spaces together with 
+	its coordinates and cluster ID (Label). rLat,rLon represent the coordinates of a point
+	randomly chosen inside the cluster. This is used for generating a map with the dataset 
+	without ending up with the cluster data all on the same point. cLat,cLon represent
+	the center coordinates of the corresponding cluster
+
+
+    Args:
+        track_array (string):		Array containing the clusters as python dict
+        gateway_ref (array):		Array containing all the reference gateways as string
+        kwargs dataset_size (int):	Number of feature spaces to generate per cluster (track)
+        kwargs nb_measures (int):	Number of points per feature space
+        kwargs train_test (float):	Train-Test ratio between 0 and 1
+        kwargs offset (int):		If the track IDs have an offset, e.g. starting with 3
+        							like they did for the trilateration measures.
+
+
+    Returns:
+        tuple (tuple(data,label),tuple(data,label)): 	Two pandas datasets with size according to test-train ratio
+        												Already random order and ready to be used with TensorFlow
+    """
+    
 	#Set default values
 	dataset_size = 20 # per track!
 	nb_measures = 10
@@ -199,7 +332,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 	compilation_train = []
 	compilation_test = []
 
-	for track in track_array_json:
+	for track in track_array:
 		#for every track we need to have some points which are only training and some distinct other points for testing
 		track_train = track[:int(train_test*len(track))]
 		track_test = track[int(train_test*len(track)):]
@@ -217,7 +350,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 					arr = [p['Gateways'][eui][0],p['Gateways'][eui][1],p['Gateways'][eui][2]]
 					tensor.append(arr)
 				else:
-					tensor.append([-200,0,0])#put 200dBm as placeholder for "far away"
+					tensor.append([0,0,0])
 			compilation_train.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 		for p in trk_dict_test:
@@ -227,7 +360,7 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 					arr = [p['Gateways'][eui][0],p['Gateways'][eui][1],p['Gateways'][eui][2]]
 					tensor.append(arr)
 				else:
-					tensor.append([-200,0,0])
+					tensor.append([0,0,0])
 			compilation_test.append({"Data":tensor,"Label":p['Track'],"Position":p['Position']})
 
 	#create random order
@@ -250,8 +383,16 @@ def create_dataset_tf(track_array_json, gateway_ref, **kwargs):
 
 	return ((data_train, labels_train),(data_test,labels_test))
 
-#calculates the cosine similarity between two vectors (already normed, data of gateways)
 def cosine_similarity(v1,v2):
+	"""Calculates the cosine similarity between two feature space vectors
+
+    Args:
+        v1 (array):		feature space vector, len(gtw)*3 entries
+        v2 (array):		feature space vector, len(gtw)*3 entries
+
+    Returns:
+        float:			Cosine similarity. Higher value for similar points
+    """
 	if len(v1) != len(v2):
 		print("ERROR: not same vector length in cosine similarity function!")
 		return 0.0
@@ -260,6 +401,15 @@ def cosine_similarity(v1,v2):
 	return dist
 
 def euclidean_similarity(v1,v2):
+	"""Calculates the euclidean similarity between two feature space vectors
+
+    Args:
+        v1 (array):		feature space vector, len(gtw)*3 entries
+        v2 (array):		feature space vector, len(gtw)*3 entries
+
+    Returns:
+        float:			Euclidean similarity. Higher value for similar points
+    """
 	if len(v1) != len(v2):
 		print("ERROR: not same vector length in euclidean similarity function!")
 		return 0.0
@@ -267,6 +417,15 @@ def euclidean_similarity(v1,v2):
 	return dist
 
 def correlation_similarity(v1,v2):
+	"""Calculates the correlation similarity between two feature space vectors
+
+    Args:
+        v1 (array):		feature space vector, len(gtw)*3 entries
+        v2 (array):		feature space vector, len(gtw)*3 entries
+
+    Returns:
+        float:			Correlation similarity. Higher value for similar points
+    """
 	if len(v1) != len(v2):
 		print("ERROR: not same vector length in correlation similarity function!")
 		return 0.0
@@ -274,6 +433,15 @@ def correlation_similarity(v1,v2):
 	return dist
 
 def manhattan_similarity(v1,v2):
+	"""Calculates the manhattan similarity between two feature space vectors
+
+    Args:
+        v1 (array):		feature space vector, len(gtw)*3 entries
+        v2 (array):		feature space vector, len(gtw)*3 entries
+
+    Returns:
+        float:			Manhattan similarity. Higher value for similar points
+    """
 	if len(v1) != len(v2):
 		print("ERROR: not same vector length in manhattan similarity function!")
 		return 0.0
@@ -282,8 +450,28 @@ def manhattan_similarity(v1,v2):
 
 
 def similarity_classifier_knn(db, test, nncl, **kwargs):
+	"""Compares the test point with the database and returns a pre-defined
+	number of best matches, according to the chosen similarity metrics.
+
+
+
+    Args:
+        db (pandas df):				Reference database to use for the search
+		test (pandas df):			Test cluster
+		nncl (int):					Number of total clusters
+		kwargs metrics (string):	'Label1' to use probability or 
+									'Label2' to use similarity to find best matches
+		kwargs flatten (float):		n-root to take for all the values in the list of
+									best matches. Makes the difference between the first
+									guess and the last guess smaller
+		kwargs first_values (int):	How many of the best guesses to keep in the list to return
+		kwargs function (string):	Similarity function. 'cosine', 'euclidean', 'correlation'
+									and 'manhattan' are accepted.			
+
+    Returns:
+        pandas dataframe:			List of the N most probable locations, with coordinates
+    """
 	metrics = kwargs['metrics'] if 'metrics' in kwargs else 'Label1'
-	idx = kwargs['idx'] if 'idx' in kwargs else 0
 	flatten = kwargs['flatten'] if 'flatten' in kwargs else 1.0
 	first_values = kwargs['first_values'] if 'first_values' in kwargs else 10
 	function = kwargs['function'] if 'function' in kwargs else 'cosine'
@@ -346,6 +534,7 @@ def similarity_classifier_knn(db, test, nncl, **kwargs):
 
 	return best_with_coords
 
+#Was used for the first ML / NN comparison
 def jaccard_classifier(input_track, **kwargs):
 	'''
 	@summary: Track classification engine based on jaccard similarity
@@ -509,23 +698,24 @@ def jaccard_index_weighted(p1_raw,p2_raw):
 
 	return intersection_count / (len(p1)+len(p2)-intersection_count)
 
-def get_gateways(track_array):
-	'''
-	@summary: creates an array of all the gateways seen by an array of tracks. useful for discovering new gateways which are not
-				in the list or use office gateways for fingerprinting as well
-	@param track_array: array of json tracks
-	@result: array with gateway EUIs (string)
-	'''
-	gtws = []
-
-	for trk in track_array:
-		for i in range(len(trk)):
-			for gtw in trk[i]['gateway_id']:
-				if gtw not in gtws:
-					gtws.append(gtw)
-	return gtws
-
 def neuronal_classification_clusters(clusters_training, clusters_validation, nb_clusters):
+	"""Function was used for the NN classification part with tensorflow on the entire
+	database. For this purpose, the database has to be split into training and validation
+	clusters.
+
+	The function handles everything from creating the model, fitting the model and even 
+	evaluating the results. As NN wasn't chosen as a final classifier, I didn't go further
+	(like returning the list or so)
+
+    Args:
+        clusters_training (pandas df):		clusters for training
+        clusters_validation (pandas df):	clusters for validation
+        nb_clusters (int):					Total number of clusters
+
+    Returns:
+        void
+    """
+
 	#prepare data
 	training_labels = clusters_training.loc[:,['Label1']]
 	validation_labels = clusters_validation.loc[:,['Label1']]
@@ -613,7 +803,32 @@ def neuronal_classification_clusters(clusters_training, clusters_validation, nb_
 
 
 def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs, neurons1, dropout1, n_dataset, n_meas, activation, layers):
+	"""Function used to test Neuronal Classification to distinguish between 9 reference points
 
+	The function handles everything from creating the model, fitting the model and even 
+	evaluating the results. Returns the mean accuracy over the last 10 epochs. Used for
+	automated testing of the best parameters.
+
+    Args:
+        training (tuple):		tuple with feature space data and labels
+        testing (tuple):		tuple with feature space data and labels
+        nb_tracks (int):		Number of reference points (tracks) to 
+        						distinguish from
+        nb_gtw (int):			How many gateways are in the feature space list
+        batch (int):			Keras batch size
+        epochs (int):			Keras number of epochs
+        neurons1 (int):			Keras number of neurons
+        dropout1 (int):			Keras dropout fraction
+        n_dataset (int):		Dataset size. Only for display and comparison purpose
+        n_meas (int):			How many packets form a feature space. Only for
+        						display and comparison purpose
+        activation (string):	Keras activation function
+        layers (int):			How many layers of the same neuron number
+
+    Returns:
+        tuple (float, float):	Mean accuracy and validation accuracy over the last
+        						10 epochs of the model					
+    """
 	#Enable GPU
 	config = tf.ConfigProto()
 	config.gpu_options.allow_growth = True
@@ -665,5 +880,6 @@ def neuronal_classification(training, testing, nb_tracks, nb_gtw, batch, epochs,
 		callbacks=[tensorboard],
 		verbose=2
 		)	
+
 	#return mean over the last 10 epochs
 	return np.mean(results.history["acc"][epochs-10:]), np.mean(results.history["val_acc"][epochs-10:])

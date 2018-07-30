@@ -1,3 +1,13 @@
+"""
+Author: Micha Burger, 24.07.2018
+https://micha-burger.ch
+LoRaWAN Localization algorithm used for Master Thesis 
+
+All the different options and possibilities to do clustering.
+Also the functions for feature-space clustering (2nd step) 
+which have not been proven as useful are still included.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -148,7 +158,7 @@ def split_train_test(db, **kwargs):
 	if 'ratio' in kwargs:
 		ratio = kwargs['ratio']
 	#seperate by clusters
-	cl_sep = split_by_cluster(db,metrics=kwargs['metrics'])
+	cl_sep = split_by_cluster(db,metrics=kwargs['metrics'] if 'metrics' in kwargs else 'Label1')
 	train = pd.DataFrame()
 	test = pd.DataFrame()
 
@@ -180,14 +190,14 @@ def normalize_data(training, testing):
 	scaler.fit(data1) #fit on training, transform on both.
 
 	d1_trf = scaler.transform(data1)
-	d2_trf = scaler.transform(data2)
+	d2_trf = scaler.transform(data2) if len(testing) else []
 
 	d1_pd = pd.DataFrame(data=d1_trf,columns=['C{}'.format(i) for i in range(d1_trf.shape[1])])
-	d2_pd = pd.DataFrame(data=d2_trf,columns=['C{}'.format(i) for i in range(d2_trf.shape[1])])
+	d2_pd = pd.DataFrame(data=d2_trf,columns=['C{}'.format(i) for i in range(d2_trf.shape[1])]) if len(testing) else pd.DataFrame()
 
 	#add label and coordinates again
 	d1_all = pd.concat([d1_pd,training.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
-	d2_all = pd.concat([d2_pd,testing.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1)
+	d2_all = pd.concat([d2_pd,testing.loc[:,['Label1','cLat','cLon','rLat','rLon']]],axis=1) if len(testing) else pd.DataFrame()
 
 	return d1_all, d2_all
 

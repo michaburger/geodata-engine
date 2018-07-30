@@ -1,3 +1,14 @@
+"""
+Author: Micha Burger, 24.07.2018
+https://micha-burger.ch
+LoRaWAN Localization algorithm used for Master Thesis 
+
+This file contains all the functions related to the 
+generation of overview maps with leaflet.js / python 
+folium. Important: To finish the generation of the map, 
+the function output_map has to be called.
+"""
+
 import json
 import folium
 from folium.plugins import HeatMap

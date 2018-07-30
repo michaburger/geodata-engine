@@ -1,3 +1,11 @@
+"""
+Author: Micha Burger, 24.07.2018
+https://micha-burger.ch
+LoRaWAN Localization algorithm used for Master Thesis 
+
+Utilities to visualize data on graphs.
+"""
+
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import plotly.graph_objs as go

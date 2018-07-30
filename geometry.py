@@ -1,3 +1,14 @@
+"""
+Author: Micha Burger, 24.07.2018
+https://micha-burger.ch
+LoRaWAN Localization algorithm used for Master Thesis 
+
+Geometrical functions, mostly used for trilateration and
+multilateration based on drawing circles, based on a distance
+function. The functions in this file are not used for the 
+final algorithm.
+"""
+
 import numpy as np
 import database as db
 import json
